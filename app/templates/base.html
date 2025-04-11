@@ -1,58 +1,54 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if title %}{{ title }} | {% endif %}旅行规划平台</title>
+    <title>{% if title %}{{ title }} | {% endif %}Travel Planning Platform</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet CSS -->
     <link href="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.3/leaflet.min.css" rel="stylesheet">
-    <!-- 自定义CSS -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- 导航栏 -->
+<body>    <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">旅行规划平台</a>
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">Travel Planning Platform</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">首页</a>
+                        <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.about') }}">关于</a>
+                        <a class="nav-link" href="{{ url_for('main.about') }}">About</a>
                     </li>
-                </ul>
-                <ul class="navbar-nav">
+                </ul>                <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="planDropdown" role="button" data-bs-toggle="dropdown">
-                            旅行计划
+                            Travel Plans
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('plan.list_plans') }}">我的计划</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('plan.create_plan') }}">创建新计划</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('share.shared_with_me') }}">分享给我的</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('plan.list_plans') }}">My Plans</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('plan.create_plan') }}">Create New Plan</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('share.shared_with_me') }}">Shared With Me</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">仪表板</a>
+                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">退出 ({{ current_user.username }})</a>
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout ({{ current_user.username }})</a>
                     </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">登录</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.register') }}">注册</a>
+                    {% else %}                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                    </li><li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -60,7 +56,7 @@
         </div>
     </nav>
 
-    <!-- 消息闪现 -->
+    <!-- Flash Messages -->
     <div class="container mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -71,15 +67,13 @@
         {% endwith %}
     </div>
 
-    <!-- 主要内容 -->
+    <!-- Main Content -->
     <main class="container my-4">
         {% block content %}{% endblock %}
-    </main>
-
-    <!-- 页脚 -->
+    </main>    <!-- Footer -->
     <footer class="bg-light py-3 mt-5">
         <div class="container text-center">
-            <p class="mb-0">&copy; 2025 旅行规划平台 | 打造您的专属旅行体验</p>
+            <p class="mb-0">&copy; 2025 Travel Planning Platform | Creating Your Personalized Travel Experience</p>
         </div>
     </footer>
 
@@ -87,9 +81,9 @@
     <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/js/bootstrap.bundle.min.js"></script>
     <!-- Leaflet JS -->
     <script src="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.3/leaflet.min.js"></script>
-    <!-- jQuery (用于AJAX) -->
+    <!-- jQuery (for AJAX) -->
     <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <!-- 自定义JS -->
+    <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

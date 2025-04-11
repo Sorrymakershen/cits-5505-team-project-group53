@@ -9,34 +9,34 @@ from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Le
 
 auth_bp = Blueprint('auth', __name__)
 
-# 登录表单
+# Login form
 class LoginForm(FlaskForm):
-    email = EmailField('邮箱', validators=[DataRequired(), Email()])
-    password = PasswordField('密码', validators=[DataRequired()])
-    remember_me = BooleanField('记住我')
-    submit = SubmitField('登录')
+    email = EmailField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Login')
 
-# 注册表单
+# Registration form
 class RegistrationForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired(), Length(min=3, max=64)])
-    email = EmailField('邮箱', validators=[DataRequired(), Email()])
-    password = PasswordField('密码', validators=[DataRequired(), Length(min=8)])
-    password2 = PasswordField('确认密码', validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('注册')
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    email = EmailField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Register')
     
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
         if user is not None:
-            raise ValidationError('该用户名已被使用，请选择不同的用户名。')
+            raise ValidationError('This username is already taken. Please choose a different username.')
     
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
-            raise ValidationError('该邮箱已注册，请使用不同的邮箱地址。')
+            raise ValidationError('This email is already registered. Please use a different email address.')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """用户登录页面"""
+    """User login page"""
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     
@@ -44,7 +44,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()   
         if user is None or not user.check_password(form.password.data):
-            flash('邮箱或密码错误', 'danger')
+            flash('Incorrect email or password', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get('next')

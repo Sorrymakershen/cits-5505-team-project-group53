@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Trip - Travel Planning Platform{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card animate fade-in">
+                <div class="card-body p-4">
+                    <h1 class="card-title mb-4">Plan Your Trip</h1>
+                    
+                    <form method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Trip Name</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                            <div class="invalid-feedback">Please give your trip a name.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="destination" class="form-label">Destination</label>
+                            <input type="text" class="form-control" id="destination" name="destination" required>
+                            <div class="invalid-feedback">Please enter a destination.</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                <div class="invalid-feedback">Please select a start date.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                <div class="invalid-feedback">Please select an end date.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="budget" class="form-label">Budget (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="budget" name="budget" min="0" step="0.01">
+                            </div>
+                            <div class="form-text">Optional. Leave blank if you haven't set a budget yet.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="interests" class="form-label">Interests</label>
+                            <textarea class="form-control" id="interests" name="interests" rows="3" placeholder="E.g., adventure, beaches, food, culture, relaxation..."></textarea>
+                            <div class="form-text">What are you interested in experiencing during this trip?</div>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="is_public" name="is_public">
+                            <label class="form-check-label" for="is_public">
+                                Make this plan public
+                            </label>
+                            <div class="form-text">Public plans can be viewed by anyone with the link</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('planner.index') }}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Trip</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum dates for the date inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start_date').setAttribute('min', today);
+    document.getElementById('end_date').setAttribute('min', today);
+    
+    // Ensure end date is after start date
+    document.getElementById('start_date').addEventListener('change', function() {
+        document.getElementById('end_date').setAttribute('min', this.value);
+        
+        // If end date is before start date, update it
+        const endDate = document.getElementById('end_date');
+        if (endDate.value && endDate.value < this.value) {
+            endDate.value = this.value;
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

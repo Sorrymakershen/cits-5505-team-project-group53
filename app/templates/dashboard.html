@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Travel Planning Platform{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h1>Your Dashboard</h1>
+                <p class="lead text-muted">Welcome back, {{ current_user.username }}!</p>
+            </div>
+            <div class="col-auto">
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('planner.create_plan') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i> New Trip
+                    </a>
+                    <a href="{{ url_for('memories.create_memory') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-camera me-2"></i> Add Memory
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-5">
+            <div class="col-md-4 mb-4 animate fade-in">
+                <div class="dashboard-stat">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <div class="stat-value">{{ current_user.travel_plans.count() }}</div>
+                    <div class="stat-label">Travel Plans</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4 animate fade-in" style="animation-delay: 0.2s;">
+                <div class="dashboard-stat">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-camera-retro"></i>
+                    </div>
+                    <div class="stat-value">{{ current_user.memories.count() }}</div>
+                    <div class="stat-label">Memories</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4 animate fade-in" style="animation-delay: 0.4s;">
+                <div class="dashboard-stat">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div class="stat-value">{{ destinations }}</div>
+                    <div class="stat-label">Destinations</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Upcoming Trips</h2>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('planner.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+        </div>
+        
+        <div class="row g-4 mb-5">
+            {% if upcoming_trips %}
+                {% for plan in upcoming_trips %}
+                    <div class="col-md-6 col-lg-4 animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ plan.title }}</h5>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                    <span>{{ plan.destination }}</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-calendar text-primary me-2"></i>
+                                    <span>{{ plan.start_date.strftime('%b %d') }} - {{ plan.end_date.strftime('%b %d, %Y') }}</span>
+                                </div>
+                                <p class="card-text small text-muted mb-3">
+                                    {{ plan.interests or 'No interests specified' | truncate(100) }}
+                                </p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <a href="{{ url_for('planner.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-light text-center py-4">
+                        <i class="fas fa-plane-departure mb-3" style="font-size: 2rem;"></i>
+                        <p class="mb-0">You don't have any upcoming trips. <a href="{{ url_for('planner.create_plan') }}">Plan a new adventure!</a></p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Recent Memories</h2>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('memories.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            {% if recent_memories %}
+                {% for memory in recent_memories %}
+                    <div class="col-md-6 col-lg-4 animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                        <div class="card h-100">
+                            {% if memory.photos.first() %}
+                                <img src="{{ url_for('static', filename='uploads/' + memory.photos.first().filename) }}" class="card-img-top" alt="{{ memory.title }}">
+                            {% else %}
+                                <div class="card-img-top bg-light text-center py-5">
+                                    <i class="fas fa-camera fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ memory.title }}</h5>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                    <span>{{ memory.location or 'No location specified' }}</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-calendar text-primary me-2"></i>
+                                    <span>{{ memory.visit_date.strftime('%b %d, %Y') if memory.visit_date else 'No date specified' }}</span>
+                                </div>
+                                <div class="mb-3">
+                                    {% for tag in memory.tags %}
+                                        <span class="tag">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <a href="{{ url_for('memories.view_memory', memory_id=memory.id) }}" class="btn btn-sm btn-primary">View Memory</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-light text-center py-4">
+                        <i class="fas fa-camera-retro mb-3" style="font-size: 2rem;"></i>
+                        <p class="mb-0">You haven't added any memories yet. <a href="{{ url_for('memories.create_memory') }}">Add your first memory!</a></p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

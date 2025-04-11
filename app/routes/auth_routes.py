@@ -52,11 +52,11 @@ def login():
             next_page = url_for('main.dashboard')
         return redirect(next_page)
     
-    return render_template('auth/login.html', title='登录', form=form)
+    return render_template('auth/login.html', title='Login', form=form)
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """用户注册页面"""
+    """User registration page"""
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     
@@ -66,15 +66,15 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('恭喜！您已成功注册。', 'success')
+        flash('Congratulations! You have successfully registered.', 'success')
         return redirect(url_for('auth.login'))
     
-    return render_template('auth/register.html', title='注册', form=form)
+    return render_template('auth/register.html', title='Register', form=form)
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    """用户登出"""
+    """User logout"""
     logout_user()
-    flash('您已成功退出登录', 'info')
+    flash('You have successfully logged out', 'info')
     return redirect(url_for('main.index'))

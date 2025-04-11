@@ -1,116 +1,81 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>我的旅行计划</h1>
-        <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> 创建新计划
-        </a>
-    </div>
-    
-    <!-- 我的计划 -->
-    <div class="card shadow-sm mb-5">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">我创建的计划</h5>
-        </div>
-        <div class="card-body">
-            {% if user_plans %}
-                <div class="row">
-                    {% for plan in user_plans %}
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100 border-light">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ plan.title }}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">{{ plan.destination }}</h6>
-                                <p class="card-text">
-                                    <small class="text-muted">
-                                        {{ plan.start_date.strftime('%Y-%m-%d') }} 至 {{ plan.end_date.strftime('%Y-%m-%d') }}
-                                    </small>
-                                </p>
-                                <p class="card-text">
-                                    <strong>预算:</strong> ￥{{ plan.budget or '未设置' }}
-                                </p>
-                                <div class="d-flex justify-content-between mt-3">
-                                    <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">查看详情</a>
-                                    <a href="{{ url_for('share.share_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-success">分享</a>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>My Travel Plans</h2>
+                <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Plan
+                </a>
+            </div>
+
+            {% if plans %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Budget</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in plans %}
+                        <tr>
+                            <td>{{ plan.title }}</td>
+                            <td>{{ plan.destination }}</td>
+                            <td>{{ plan.start_date.strftime('%Y-%m-%d') }} to {{ plan.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>${{ plan.budget }}</td>
+                            <td>
+                                <span class="badge bg-{{ plan.status_color }}">{{ plan.status }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('plan.edit_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePlanModal{{ plan.id }}">Delete</button>
                                 </div>
-                            </div>
-                            <div class="card-footer bg-transparent d-flex justify-content-between">
-                                <small class="text-muted">创建于: {{ plan.created_at.strftime('%Y-%m-%d') }}</small>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="dropdownMenu{{ plan.id }}" data-bs-toggle="dropdown" aria-expanded="false">
-                                        操作
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu{{ plan.id }}">
-                                        <li><a class="dropdown-item" href="{{ url_for('plan.edit_plan', plan_id=plan.id) }}">编辑</a></li>
-                                        <li>
-                                            <form action="{{ url_for('plan.delete_plan', plan_id=plan.id) }}" method="post" onsubmit="return confirm('确定要删除这个计划吗？此操作不可撤销。');">
-                                                <button type="submit" class="dropdown-item text-danger">删除</button>
-                                            </form>
-                                        </li>
-                                    </ul>
+
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deletePlanModal{{ plan.id }}" tabindex="-1" aria-labelledby="deletePlanModalLabel{{ plan.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deletePlanModalLabel{{ plan.id }}">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete "{{ plan.title }}"? This action cannot be undone.
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('plan.delete_plan', plan_id=plan.id) }}" method="POST" class="d-inline">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <div class="alert alert-info">
-                    <p class="mb-0">您还没有创建任何旅行计划。点击上方的"创建新计划"按钮开始规划您的旅程！</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- 共享给我的计划 -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">分享给我的计划</h5>
-        </div>
-        <div class="card-body">
-            {% if shared_plans %}
-                <div class="row">
-                    {% for plan in shared_plans %}
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100 border-success">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ plan.title }}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">{{ plan.destination }}</h6>
-                                <p class="card-text">
-                                    <small class="text-muted">
-                                        {{ plan.start_date.strftime('%Y-%m-%d') }} 至 {{ plan.end_date.strftime('%Y-%m-%d') }}
-                                    </small>
-                                </p>
-                                <p class="card-text">
-                                    <strong>分享者:</strong> {{ plan.creator.username }}
-                                </p>
-                                <div class="mt-3">
-                                    <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-success">查看详情</a>
-                                </div>
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <small class="text-muted">分享类型: 
-                                    {% for share in plan.shares %}
-                                        {% if share.shared_with_id == current_user.id %}
-                                            {% if share.permission == 'view' %}
-                                                只读
-                                            {% else %}
-                                                可编辑
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-info">
-                    <p class="mb-0">目前没有其他用户与您共享的旅行计划。</p>
-                </div>
+            <div class="text-center py-5">
+                <img src="{{ url_for('static', filename='images/empty-plans.svg') }}" alt="No plans" class="mb-4" style="max-width: 200px;">
+                <h3>No Travel Plans Yet</h3>
+                <p class="text-muted">Start planning your next adventure!</p>
+                <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create Your First Plan
+                </a>
+            </div>
             {% endif %}
         </div>
     </div>

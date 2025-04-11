@@ -6,7 +6,7 @@
         <div class="col-md-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">创建新的旅行计划</h4>
+                    <h4 class="mb-0">Create New Travel Plan</h4>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('plan.create_plan') }}">
@@ -23,7 +23,7 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.title(class="form-control", placeholder="例如：东京7日游") }}
+                                    {{ form.title(class="form-control", placeholder="e.g., 7 Days in Tokyo") }}
                                 {% endif %}
                             </div>
                         </div>
@@ -39,7 +39,7 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.destination(class="form-control", placeholder="例如：东京") }}
+                                    {{ form.destination(class="form-control", placeholder="e.g., Tokyo") }}
                                 {% endif %}
                             </div>
                         </div>
@@ -85,9 +85,9 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.budget(class="form-control", placeholder="输入您的旅行预算（元）") }}
+                                    {{ form.budget(class="form-control", placeholder="Enter your travel budget (USD)") }}
                                 {% endif %}
-                                <small class="form-text text-muted">输入您计划花费的总金额，系统将帮您分配各项开支</small>
+                                <small class="form-text text-muted">Enter your total planned budget, and the system will help allocate expenses</small>
                             </div>
                         </div>
                         
@@ -102,14 +102,14 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.preferences(class="form-control", rows=4, placeholder="输入您的旅行偏好和兴趣，例如：美食,博物馆,购物,自然风光（用逗号分隔）") }}
+                                    {{ form.preferences(class="form-control", rows=4, placeholder="Enter your travel preferences and interests, e.g., Food, Museums, Shopping, Nature (separate with commas)") }}
                                 {% endif %}
-                                <small class="form-text text-muted">列出您感兴趣的活动类型，这将帮助我们为您生成更符合期望的行程</small>
+                                <small class="form-text text-muted">List your interests to help us generate an itinerary that better matches your expectations</small>
                             </div>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ url_for('plan.list_plans') }}" class="btn btn-outline-secondary me-md-2">取消</a>
+                            <a href="{{ url_for('plan.list_plans') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
                             {{ form.submit(class="btn btn-primary") }}
                         </div>
                     </form>

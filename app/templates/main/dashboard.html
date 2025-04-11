@@ -1,105 +1,106 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<div class="container py-4">
     <div class="row">
-        <div class="col-lg-12">
-            <h1 class="mb-4">欢迎来到您的个人仪表板</h1>
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">My Dashboard</h2>
+                <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Plan
+                </a>
+            </div>
         </div>
     </div>
-    
-    <!-- 用户概览 -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card shadow-sm">
+
+    <div class="row">
+        <!-- Quick Stats -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div>
-                            <h4>{{ current_user.username }}</h4>
-                            <p class="text-muted mb-0">{{ current_user.email }}</p>
-                            <small class="text-muted">注册于: {{ current_user.created_at.strftime('%Y-%m-%d') }}</small>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Active Plans</h5>
+                    <p class="display-4">{{ active_plans }}</p>
+                    <p class="text-muted">Upcoming travel plans</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Shared Plans</h5>
+                    <p class="display-4">{{ shared_plans }}</p>
+                    <p class="text-muted">Plans shared with others</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Completed Plans</h5>
+                    <p class="display-4">{{ completed_plans }}</p>
+                    <p class="text-muted">Past travel experiences</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 快速统计 -->
-    <div class="row mb-4">
-        <!-- 旅行计划统计 -->
-        <div class="col-md-4">
-            <div class="card border-primary mb-3 shadow-sm">
-                <div class="card-header bg-primary text-white">我的旅行计划</div>
-                <div class="card-body text-center">
-                    <h2 class="card-title">{{ user_plans|default(0) }}</h2>
-                    <p class="card-text">已创建的旅行计划</p>
-                    <a href="{{ url_for('plan.list_plans') }}" class="btn btn-outline-primary">查看所有计划</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 共享给我的计划统计 -->
-        <div class="col-md-4">
-            <div class="card border-success mb-3 shadow-sm">
-                <div class="card-header bg-success text-white">分享给我的</div>
-                <div class="card-body text-center">
-                    <h2 class="card-title">{{ shared_plans|default(0) }}</h2>
-                    <p class="card-text">他人分享的旅行计划</p>
-                    <a href="{{ url_for('share.shared_with_me') }}" class="btn btn-outline-success">查看共享计划</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 创建新计划 -->
-        <div class="col-md-4">
-            <div class="card border-info mb-3 shadow-sm">
-                <div class="card-header bg-info text-white">开始新旅程</div>
-                <div class="card-body text-center">
-                    <h2 class="card-title"><i class="bi bi-plus-circle"></i></h2>
-                    <p class="card-text">创建全新的旅行计划</p>
-                    <a href="{{ url_for('plan.create_plan') }}" class="btn btn-outline-info">创建计划</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 最近的计划 -->
     <div class="row">
-        <div class="col-md-12">
-            <h3 class="mb-3">最近的旅行计划</h3>
-            {% if recent_plans %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>计划名称</th>
-                            <th>目的地</th>
-                            <th>旅行时间</th>
-                            <th>预算</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in recent_plans %}
-                        <tr>
-                            <td>{{ plan.title }}</td>
-                            <td>{{ plan.destination }}</td>
-                            <td>{{ plan.start_date.strftime('%Y-%m-%d') }} 至 {{ plan.end_date.strftime('%Y-%m-%d') }}</td>
-                            <td>￥{{ plan.budget }}</td>
-                            <td>
-                                <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">查看</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Recent Plans -->
+        <div class="col-md-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Recent Plans</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_plans %}
+                        <div class="list-group list-group-flush">
+                            {% for plan in recent_plans %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ plan.title }}</h6>
+                                            <small class="text-muted">
+                                                <i class="bi bi-geo-alt me-1"></i>{{ plan.destination }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted my-4">No travel plans yet. Start creating one!</p>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                您还没有创建任何旅行计划。<a href="{{ url_for('plan.create_plan') }}">立即创建</a>您的第一个计划吧！
+        </div>
+
+        <!-- Shared With Me -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Shared With Me</h5>
+                </div>
+                <div class="card-body">
+                    {% if shared_with_me %}
+                        <div class="list-group list-group-flush">
+                            {% for plan in shared_with_me %}
+                                <div class="list-group-item">
+                                    <h6 class="mb-1">{{ plan.title }}</h6>
+                                    <small class="text-muted">Shared by {{ plan.owner.username }}</small>
+                                    <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="stretched-link"></a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted my-4">No plans have been shared with you yet.</p>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>

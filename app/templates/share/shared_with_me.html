@@ -1,54 +1,55 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<div class="container py-4">
     <div class="row">
-        <div class="col-lg-12 mb-4">
-            <h1>分享给我的旅行计划</h1>
-            <p class="text-muted">查看其他用户与您共享的旅行计划。</p>
-        </div>
-    </div>
+        <div class="col-12">
+            <h2 class="mb-4">Plans Shared With Me</h2>
 
-    <div class="row">
-        {% if shared_plans %}
-            {% for item in shared_plans %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header {% if item.permission == 'edit' %}bg-warning text-dark{% else %}bg-info text-white{% endif %}">
-                        {% if item.permission == 'edit' %}
-                            <span><i class="bi bi-pencil-square"></i> 可编辑的计划</span>
-                        {% else %}
-                            <span><i class="bi bi-eye"></i> 只读计划</span>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">{{ item.plan.title }}</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">{{ item.plan.destination }}</h6>
-                        <p class="card-text">
-                            <small class="text-muted">
-                                {{ item.plan.start_date.strftime('%Y-%m-%d') }} 至 {{ item.plan.end_date.strftime('%Y-%m-%d') }}
-                            </small>
-                        </p>
-                        <p class="card-text">
-                            <strong>分享者:</strong> {{ item.owner.username }}
-                        </p>
-                        <p class="card-text">
-                            <strong>预算:</strong> ￥{{ item.plan.budget or '未设置' }}
-                        </p>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <a href="{{ url_for('plan.view_plan', plan_id=item.plan.id) }}" class="btn btn-outline-primary w-100">查看计划</a>
-                    </div>
-                </div>
+            {% if shared_plans %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Owner</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Permission</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for share in shared_plans %}
+                        <tr>
+                            <td>{{ share.plan.title }}</td>
+                            <td>{{ share.plan.owner.username }}</td>
+                            <td>{{ share.plan.destination }}</td>
+                            <td>{{ share.plan.start_date.strftime('%Y-%m-%d') }} to {{ share.plan.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ share.permission }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('plan.view_plan', plan_id=share.plan.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    {% if share.permission == 'edit' %}
+                                    <a href="{{ url_for('plan.edit_plan', plan_id=share.plan.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12">
-                <div class="alert alert-info">
-                    <p class="mb-0">目前没有其他用户与您分享的旅行计划。</p>
-                </div>
+            {% else %}
+            <div class="text-center py-5">
+                <img src="{{ url_for('static', filename='images/empty-shared.svg') }}" alt="No shared plans" class="mb-4" style="max-width: 200px;">
+                <h3>No Plans Shared With You</h3>
+                <p class="text-muted">When someone shares a travel plan with you, it will appear here.</p>
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

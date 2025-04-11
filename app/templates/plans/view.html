@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .budget-chart {
+        height: 300px;
+    }
+    .timeline-container {
+        position: relative;
+        padding: 20px 0;
+    }
+    .timeline-day {
+        margin-bottom: 30px;
+        position: relative;
+    }
+    .timeline-date {
+        font-weight: bold;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 5px 10px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    .activity-card {
+        margin-bottom: 15px;
+        border-left: 4px solid #0d6efd;
+    }
+    .activity-card .activity-time {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    #map {
+        height: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- 计划标题和基本信息 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ plan.title }}</h1>
+            <p class="text-muted">
+                <strong>目的地:</strong> {{ plan.destination }} | 
+                <strong>日期:</strong> {{ plan.start_date.strftime('%Y-%m-%d') }} 至 {{ plan.end_date.strftime('%Y-%m-%d') }} |
+                <strong>预算:</strong> ￥{{ plan.budget or '未设置' }}
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="btn-group" role="group">
+                {% if is_owner %}
+                <a href="{{ url_for('plan.edit_plan', plan_id=plan.id) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> 编辑计划
+                </a>
+                <a href="{{ url_for('share.share_plan', plan_id=plan.id) }}" class="btn btn-outline-success">
+                    <i class="bi bi-share"></i> 分享计划
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 生成行程按钮，仅对所有者显示且如果还没有行程 -->
+    {% if is_owner and not plan.itinerary %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm bg-light">
+                <div class="card-body text-center">
+                    <h4 class="card-title">您的行程尚未生成</h4>
+                    <p class="card-text">根据您提供的旅行偏好和目的地信息，我们可以为您生成个性化行程和预算分配。</p>
+                    <button id="generatePlanBtn" class="btn btn-primary" data-plan-id="{{ plan.id }}">
+                        生成行程和预算规划
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 选项卡导航 -->
+    <ul class="nav nav-tabs mb-4" id="planTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="itinerary-tab" data-bs-toggle="tab" data-bs-target="#itinerary" type="button" role="tab">
+                行程安排
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="map-tab" data-bs-toggle="tab" data-bs-target="#map-view" type="button" role="tab">
+                地图视图
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="budget-tab" data-bs-toggle="tab" data-bs-target="#budget" type="button" role="tab">
+                预算分配
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab">
+                旅行偏好
+            </button>
+        </li>
+    </ul>
+    
+    <!-- 选项卡内容 -->
+    <div class="tab-content" id="planTabsContent">
+        <!-- 行程安排 -->
+        <div class="tab-pane fade show active" id="itinerary" role="tabpanel">
+            {% if plan.itinerary %}
+                {% set itinerary_data = plan.get_itinerary() %}
+                <div class="timeline-container">
+                    {% for day in itinerary_data.days %}
+                    <div class="timeline-day">
+                        <div class="timeline-date">
+                            第 {{ day.day }} 天 - {{ day.date }}
+                        </div>
+                        {% for activity in day.activities %}
+                        <div class="card activity-card">
+                            <div class="card-body">
+                                <div class="activity-time">{{ activity.time }}</div>
+                                <h5 class="card-title">{{ activity.name }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">{{ activity.location }}</h6>
+                                <p class="card-text">{{ activity.description }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <p class="mb-0">尚未生成行程安排。{% if is_owner %}请点击"生成行程和预算规划"按钮创建您的个性化行程。{% endif %}</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 地图视图 -->
+        <div class="tab-pane fade" id="map-view" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="map" class="rounded"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 预算分配 -->
+        <div class="tab-pane fade" id="budget" role="tabpanel">
+            {% if plan.budget_allocation %}
+                {% set budget_data = plan.get_budget_allocation() %}
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-primary text-white">
+                                预算分配
+                            </div>
+                            <div class="card-body">
+                                <canvas id="budgetChart" class="budget-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                预算详情
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">总预算: ￥{{ budget_data.total }}</h5>
+                                <hr>
+                                <ul class="list-group list-group-flush">
+                                    {% for category, amount in budget_data.categories.items() %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ category }}
+                                        <span class="badge bg-primary rounded-pill">￥{{ amount }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <p class="mb-0">尚未生成预算分配。{% if is_owner %}请点击"生成行程和预算规划"按钮创建您的个性化预算分配。{% endif %}</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 旅行偏好 -->
+        <div class="tab-pane fade" id="preferences" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    旅行偏好
+                </div>
+                <div class="card-body">
+                    {% if plan.preferences %}
+                        {% set preferences_data = plan.get_preferences() %}
+                        <h5 class="card-title">您的兴趣和偏好</h5>
+                        <div class="mb-4">
+                            {% if preferences_data.interests %}
+                                {% for interest in preferences_data.interests %}
+                                <span class="badge bg-info text-dark me-2 mb-2">{{ interest }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">未指定特定兴趣</p>
+                            {% endif %}
+                        </div>
+                        
+                        {% if is_owner %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('plan.edit_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">
+                                更新偏好
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="card-text">尚未设置旅行偏好。</p>
+                        {% if is_owner %}
+                        <a href="{{ url_for('plan.edit_plan', plan_id=plan.id) }}" class="btn btn-sm btn-outline-primary">
+                            添加偏好
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 地图初始化
+        var mapTab = document.getElementById('map-tab');
+        mapTab.addEventListener('shown.bs.tab', function (e) {
+            // 延迟初始化地图，确保容器可见
+            setTimeout(function() {
+                initMap();
+            }, 200);
+        });
+        
+        // 预算图表
+        {% if plan.budget_allocation %}
+            var budgetTab = document.getElementById('budget-tab');
+            budgetTab.addEventListener('shown.bs.tab', function (e) {
+                // 延迟初始化图表，确保容器可见
+                setTimeout(function() {
+                    initBudgetChart();
+                }, 200);
+            });
+        {% endif %}
+        
+        // 生成行程按钮事件
+        var generateBtn = document.getElementById('generatePlanBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', function() {
+                var planId = this.getAttribute('data-plan-id');
+                generatePlan(planId);
+            });
+        }
+    });
+    
+    // 初始化地图
+    function initMap() {
+        var map = L.map('map').setView([35.6895, 139.6917], 12);  // 默认以东京为例
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // 如果有行程数据，添加标记点
+        {% if plan.itinerary %}
+            {% set itinerary_data = plan.get_itinerary() %}
+            {% for day in itinerary_data.days %}
+                {% for activity in day.activities %}
+                    // 这里应该有真实的经纬度数据，这里仅做示例
+                    // 实际应用中需要通过地理编码服务获取位置的经纬度
+                    var lat = 35.6895 + Math.random() * 0.02 - 0.01;
+                    var lng = 139.6917 + Math.random() * 0.02 - 0.01;
+                    var marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup("<b>{{ activity.name }}</b><br>{{ activity.description }}");
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+    }
+    
+    // 初始化预算图表
+    function initBudgetChart() {
+        {% if plan.budget_allocation %}
+            {% set budget_data = plan.get_budget_allocation() %}
+            var ctx = document.getElementById('budgetChart').getContext('2d');
+            var budgetChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [{% for category in budget_data.categories %}'{{ category }}',{% endfor %}],
+                    datasets: [{
+                        label: '预算分配',
+                        data: [{% for amount in budget_data.categories.values() %}{{ amount }},{% endfor %}],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        {% endif %}
+    }
+    
+    // 生成行程和预算分配
+    function generatePlan(planId) {
+        var btn = document.getElementById('generatePlanBtn');
+        btn.disabled = true;
+        btn.innerHTML = '正在生成，请稍候...';
+        
+        // 发送AJAX请求
+        fetch('/plans/' + planId + '/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                alert('生成失败：' + data.error);
+                btn.disabled = false;
+                btn.innerHTML = '生成行程和预算规划';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('请求失败，请稍后再试');
+            btn.disabled = false;
+            btn.innerHTML = '生成行程和预算规划';
+        });
+    }
+</script>
+{% endblock %}

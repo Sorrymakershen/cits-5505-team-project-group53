@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('plan.list_plans') }}">我的计划</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}">{{ plan.title }}</a></li>
+                    <li class="breadcrumb-item active">分享计划</li>
+                </ol>
+            </nav>
+            <h1>分享"{{ plan.title }}"</h1>
+            <p class="text-muted">您可以将此旅行计划分享给朋友、家人或旅行顾问，让他们查看或协助编辑您的行程。</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 分享表单 -->
+        <div class="col-md-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">添加新的分享</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('share.share_plan', plan_id=plan.id) }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {% if form.email.errors %}
+                                {{ form.email(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.email(class="form-control", placeholder="输入用户的电子邮箱") }}
+                            {% endif %}
+                            <small class="form-text text-muted">用户必须已在系统中注册</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.permission.label(class="form-label") }}
+                            {% if form.permission.errors %}
+                                {{ form.permission(class="form-select is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.permission.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.permission(class="form-select") }}
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                <strong>只能查看</strong>: 用户只能查看您的计划，不能修改<br>
+                                <strong>可以编辑</strong>: 用户可以查看并编辑您的计划
+                            </small>
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 分享提示 -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> 分享说明</h5>
+                    <ul class="mb-0">
+                        <li>被分享的用户需要拥有平台账号</li>
+                        <li>您可以随时更改或取消分享权限</li>
+                        <li>"可以编辑"权限允许用户修改计划细节，但不能删除整个计划</li>
+                        <li>您作为计划创建者始终拥有完全控制权</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 已分享用户列表 -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">已分享给的用户</h5>
+                </div>
+                <div class="card-body">
+                    {% if shared_users %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>用户名</th>
+                                        <th>电子邮箱</th>
+                                        <th>权限</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in shared_users %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.email }}</td>
+                                        <td>
+                                            {% if user.permission == 'view' %}
+                                                <span class="badge bg-info">只能查看</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">可以编辑</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button 
+                                                class="btn btn-sm btn-danger remove-share-btn" 
+                                                data-plan-id="{{ plan.id }}" 
+                                                data-user-id="{{ user.id }}"
+                                                data-username="{{ user.username }}">
+                                                取消分享
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p class="mb-0">您尚未与任何人分享此旅行计划。</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 处理取消分享按钮点击事件
+        const removeShareButtons = document.querySelectorAll('.remove-share-btn');
+        
+        removeShareButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const planId = this.getAttribute('data-plan-id');
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                
+                if (confirm(`确定要取消与 ${username} 的分享吗？`)) {
+                    removeShare(planId, userId, this);
+                }
+            });
+        });
+    });
+    
+    // 取消分享的AJAX请求
+    function removeShare(planId, userId, buttonElement) {
+        fetch(`/share/remove/${planId}/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 移除表格行
+                const row = buttonElement.closest('tr');
+                row.remove();
+                
+                // 显示成功消息
+                alert(data.message);
+                
+                // 如果表格为空，显示"无分享"的消息
+                const tbody = document.querySelector('table tbody');
+                if (tbody && tbody.children.length === 0) {
+                    const tableResponsive = document.querySelector('.table-responsive');
+                    tableResponsive.innerHTML = `
+                        <div class="alert alert-info">
+                            <p class="mb-0">您尚未与任何人分享此旅行计划。</p>
+                        </div>
+                    `;
+                }
+            } else {
+                alert('操作失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('请求失败，请稍后再试');
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4 text-center">关于旅行规划平台</h1>
+            <div class="card shadow-sm mb-5">
+                <div class="card-body">
+                    <h3 class="card-title">我们的使命</h3>
+                    <p class="card-text">
+                        旅行规划平台旨在为旅行爱好者提供一个智能化的行程规划工具，帮助用户根据个人偏好和需求打造专属旅行体验。
+                        通过我们的平台，您可以轻松创建旅行计划、获取个性化推荐，并与朋友和家人共享您的旅程。
+                    </p>
+                    
+                    <h3 class="card-title mt-4">核心功能</h3>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">数据上传</div>
+                                <div class="card-body">
+                                    <p class="card-text">上传您的旅行偏好、预算和时间安排，帮助系统了解您的需求</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">自动分析</div>
+                                <div class="card-body">
+                                    <p class="card-text">系统自动生成个性化的旅行计划，包括景点推荐和预算分配</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">选择性共享</div>
+                                <div class="card-body">
+                                    <p class="card-text">与旅伴或旅行顾问选择性地分享您的旅行计划和数据</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="card-title mt-4">如何使用</h3>
+                    <ol class="list-group list-group-numbered mb-3">
+                        <li class="list-group-item">创建账户并登录系统</li>
+                        <li class="list-group-item">输入旅行目的地、时间和预算</li>
+                        <li class="list-group-item">添加个人喜好和兴趣点</li>
+                        <li class="list-group-item">查看系统生成的旅行计划建议</li>
+                        <li class="list-group-item">根据需要调整计划细节</li>
+                        <li class="list-group-item">选择性地与他人分享您的计划</li>
+                    </ol>
+                    
+                    <h3 class="card-title mt-4">隐私保护</h3>
+                    <p class="card-text">
+                        我们高度重视用户隐私。您的个人数据和旅行偏好将被安全存储，
+                        且只有在您明确授权的情况下才会被分享给指定的用户。
+                        您可以随时调整分享设置，控制谁能查看您的旅行计划。
+                    </p>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary me-2">返回首页</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary">开始规划旅行</a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">立即注册</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

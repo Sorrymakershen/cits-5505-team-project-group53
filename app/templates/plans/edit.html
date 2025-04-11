@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">编辑旅行计划</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('plan.edit_plan', plan_id=plan.id) }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                {{ form.title.label(class="form-label") }}
+                                {% if form.title.errors %}
+                                    {{ form.title(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.title.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.title(class="form-control") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                {{ form.destination.label(class="form-label") }}
+                                {% if form.destination.errors %}
+                                    {{ form.destination(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.destination.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.destination(class="form-control") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.start_date.label(class="form-label") }}
+                                {% if form.start_date.errors %}
+                                    {{ form.start_date(class="form-control is-invalid", type="date") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.start_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.start_date(class="form-control", type="date") }}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                {{ form.end_date.label(class="form-label") }}
+                                {% if form.end_date.errors %}
+                                    {{ form.end_date(class="form-control is-invalid", type="date") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.end_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.end_date(class="form-control", type="date") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                {{ form.budget.label(class="form-label") }}
+                                {% if form.budget.errors %}
+                                    {{ form.budget(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.budget.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.budget(class="form-control") }}
+                                {% endif %}
+                                <small class="form-text text-muted">修改预算可能会影响已生成的预算分配</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                {{ form.preferences.label(class="form-label") }}
+                                {% if form.preferences.errors %}
+                                    {{ form.preferences(class="form-control is-invalid", rows=4) }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.preferences.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.preferences(class="form-control", rows=4) }}
+                                {% endif %}
+                                <small class="form-text text-muted">用逗号分隔您的兴趣爱好，例如：美食,博物馆,购物,自然风光</small>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <p class="mb-0"><strong>注意：</strong> 修改旅行日期、目的地或预算可能会导致需要重新生成行程安排和预算分配。</p>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('plan.view_plan', plan_id=plan.id) }}" class="btn btn-outline-secondary me-md-2">取消</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

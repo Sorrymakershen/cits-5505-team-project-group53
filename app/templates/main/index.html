@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <!-- 介绍区域 -->
+    <div class="row align-items-center py-5">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold">智能旅行规划平台</h1>
+            <p class="lead">根据您的偏好和需求，智能生成个性化旅行计划。轻松规划，愉快出行！</p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('plan.create_plan') }}" class="btn btn-primary btn-lg px-4 me-md-2">开始规划旅行</a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-lg px-4">查看我的仪表板</a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 me-md-2">立即注册</a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">登录</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <img src="{{ url_for('static', filename='images/travel_banner.jpg') }}" class="img-fluid rounded shadow-lg" alt="旅行规划平台">
+        </div>
+    </div>
+
+    <!-- 特点展示 -->
+    <div class="row py-5">
+        <div class="col-12 text-center mb-4">
+            <h2 class="fw-bold">我们的核心功能</h2>
+            <p class="text-muted">体验智能旅行规划的便捷</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="feature-icon d-inline-flex align-items-center justify-content-center fs-2 mb-3">
+                        <i class="bi bi-cloud-upload"></i>
+                    </div>
+                    <h3 class="card-title">数据上传</h3>
+                    <p class="card-text">上传您的旅行偏好、预算和时间安排，或导入历史旅行数据，系统将为您分析最适合的行程。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="feature-icon d-inline-flex align-items-center justify-content-center fs-2 mb-3">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h3 class="card-title">自动分析</h3>
+                    <p class="card-text">基于您的数据，系统自动生成个性化的旅行计划，包括景点推荐、活动安排和预算分配。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="feature-icon d-inline-flex align-items-center justify-content-center fs-2 mb-3">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3 class="card-title">选择性共享</h3>
+                    <p class="card-text">与您的旅伴或旅行顾问选择性地分享旅行计划和数据，实现更好的协作和体验。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作引导 -->
+    <div class="row bg-light py-5 rounded-3 mt-4">
+        <div class="col-12 text-center mb-4">
+            <h2 class="fw-bold">如何使用平台?</h2>
+            <p class="text-muted">简单四步，开启您的旅行计划</p>
+        </div>
+        
+        <div class="col-md-3 text-center">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">1</div>
+            <h5 class="mt-3">注册账号</h5>
+            <p class="text-muted">创建您的个人账户</p>
+        </div>
+        
+        <div class="col-md-3 text-center">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">2</div>
+            <h5 class="mt-3">输入偏好</h5>
+            <p class="text-muted">填写您的旅行细节</p>
+        </div>
+        
+        <div class="col-md-3 text-center">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">3</div>
+            <h5 class="mt-3">获取计划</h5>
+            <p class="text-muted">查看生成的旅行建议</p>
+        </div>
+        
+        <div class="col-md-3 text-center">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">4</div>
+            <h5 class="mt-3">分享与协作</h5>
+            <p class="text-muted">与旅伴一起优化计划</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

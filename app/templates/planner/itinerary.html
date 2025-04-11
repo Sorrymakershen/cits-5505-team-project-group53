@@ -109,13 +109,12 @@
                                             <td>{{ item.time or '-' }}</td>
                                             <td>{{ item.activity }}</td>
                                             <td>{{ item.location or '-' }}</td>
-                                            <td>{{ '$' + item.cost|string if item.cost else '-' }}</td>
-                                            <td>
+                                            <td>{{ '$' + item.cost|string if item.cost else '-' }}</td>                                            <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="{{ url_for('planner.edit_item', plan_id=plan.id, item_id=item.id) }}" class="btn btn-outline-primary">
+                                                    <a href="{{ url_for('planner.edit_plan', plan_id=plan.id) }}?item_id={{ item.id }}" class="btn btn-outline-primary">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <form action="{{ url_for('planner.delete_item', plan_id=plan.id, item_id=item.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this activity?');">
+                                                    <form action="{{ url_for('planner.delete_plan', plan_id=plan.id) }}?item_id={{ item.id }}" method="post" onsubmit="return confirm('Are you sure you want to delete this activity?');">
                                                         <button type="submit" class="btn btn-outline-danger">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
@@ -134,12 +133,24 @@
                         </div>
                     {% endif %}
                 </div>
-            </div>
-
-            <div class="card mt-4 animate fade-in" style="animation-delay: 0.3s;">
+            </div>            <div class="card mt-4 animate fade-in" style="animation-delay: 0.3s;">
                 <div class="card-body">
                     <h3 class="card-title mb-4">Map Preview</h3>
-                    <div id="planMap" class="map-container" data-items='{{ items | tojson }}' style="height: 300px;">
+                    {% set map_items = [] %}
+                    {% for item in items %}
+                        {% set _ = map_items.append({
+                            'id': item.id,
+                            'day': item.day,
+                            'time': item.time|string if item.time else '',
+                            'activity': item.activity,
+                            'location': item.location,
+                            'lat': item.lat,
+                            'lng': item.lng,
+                            'cost': item.cost|float if item.cost else 0,
+                            'notes': item.notes
+                        }) %}
+                    {% endfor %}
+                    <div id="planMap" class="map-container" data-items='{{ map_items | tojson }}' style="height: 300px;">
                         <!-- Map will be inserted here by JavaScript -->
                     </div>
                 </div>

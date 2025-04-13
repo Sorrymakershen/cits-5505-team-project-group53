@@ -63,8 +63,14 @@ def view_plan(plan_id):
         if not shared and not plan.is_public:
             flash('You do not have access to this travel plan', 'danger')
             return redirect(url_for('planner.index'))
+    
+    # Calculate total cost from all itinerary items
+    total_cost = 0
+    for item in plan.itinerary_items:
+        if item.cost:
+            total_cost += item.cost
             
-    return render_template('planner/view.html', plan=plan)
+    return render_template('planner/view.html', plan=plan, total_cost=total_cost)
 
 @planner_bp.route('/<int:plan_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -125,8 +131,14 @@ def manage_itinerary(plan_id):
         time = request.form.get('time')
         activity = request.form.get('activity')
         location = request.form.get('location')
+        
+        # Convert empty strings to None for float fields
         lat = request.form.get('lat')
-        lng = request.form.get('lng')
+        lat = float(lat) if lat.strip() else None
+        
+        lng = request.form.get('lng') 
+        lng = float(lng) if lng.strip() else None
+        
         cost = float(request.form.get('cost') or 0)
         notes = request.form.get('notes')
         

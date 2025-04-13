@@ -73,6 +73,7 @@ travel_planning_platform/
 5. Use the "Share" feature to share your plan with travel companions.
 
 #### Developers
-23935599 XINYU SHEN
+23935599 XINYU SHEN Sorrymakershen
+
 
 © 2025

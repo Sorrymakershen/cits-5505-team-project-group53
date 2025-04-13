@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Share Travel Plan - {{ plan.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center mb-2">
+                <a href="{{ url_for('planner.view_plan', plan_id=plan.id) }}" class="text-decoration-none me-3">
+                    <i class="fas fa-arrow-left"></i> Back to Plan
+                </a>
+            </div>
+            <h1 class="mb-2">Share "{{ plan.title }}"</h1>
+            <p class="text-muted">Share your travel plan with others</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-7">
+            <!-- Sharing Options -->
+            <div class="card animate fade-in mb-4">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Invite Someone</h3>
+                    <form method="post" action="{{ url_for('planner.share_plan', plan_id=plan.id) }}" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="permission" class="form-label">Permission Level</label>
+                            <select class="form-select" id="permission" name="permission" required>
+                                <option value="view">View Only</option>
+                                <option value="edit">View and Edit</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Personal Message (Optional)</label>
+                            <textarea class="form-control" id="message" name="message" rows="3" placeholder="Add a note to your invitation..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Send Invitation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Public Link -->
+            <div class="card animate fade-in" style="animation-delay: 0.2s;">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Public Link</h3>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="make_public" {% if plan.is_public %}checked{% endif %}>
+                        <label class="form-check-label" for="make_public">Make plan publicly accessible</label>
+                    </div>
+                    
+                    {% if plan.is_public %}
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="public_link" value="{{ url_for('planner.view_shared_plan', share_code=plan.share_code, _external=True) }}" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Anyone with this link can view this plan</span>
+                            <span id="copy-message" class="text-success small d-none">Copied to clipboard!</span>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Enable public access to generate a shareable link.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-5 mt-4 mt-lg-0">
+            <!-- Current Shares -->
+            <div class="card animate fade-in" style="animation-delay: 0.3s;">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Shared With</h3>
+                    
+                    {% if shares %}
+                        <div class="list-group">
+                            {% for share in shares %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;">
+                                    <div>
+                                        <h6 class="mb-0">{{ share.user.username or share.email }}</h6>
+                                        <small class="text-muted">
+                                            {% if share.permission == 'view' %}
+                                                View Only
+                                            {% elif share.permission == 'edit' %}
+                                                Can Edit
+                                            {% endif %}
+                                        </small>
+                                        <br>
+                                        <small class="text-muted">Shared: {{ share.created_at.strftime('%b %d, %Y') }}</small>
+                                    </div>
+                                    <form method="post" action="{{ url_for('planner.remove_share', plan_id=plan.id, share_id=share.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to revoke access?');">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                            <p>You haven't shared this plan with anyone yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Plan Summary -->
+            <div class="card animate fade-in mt-4" style="animation-delay: 0.4s;">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-3">Plan Summary</h3>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                        <span>{{ plan.destination }}</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-calendar text-primary me-2"></i>
+                        <span>{{ plan.start_date.strftime('%b %d') }} - {{ plan.end_date.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    {% if plan.budget %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-money-bill-wave text-success me-2"></i>
+                            <span>Budget: ${{ plan.budget }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-map-marked-alt text-info me-2"></i>
+                        <span>{{ plan.itinerary_items.count() }} Activities</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Toggle public status of plan
+    document.getElementById('make_public').addEventListener('change', function() {
+        fetch('{{ url_for("planner.toggle_public", plan_id=plan.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                is_public: this.checked
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    });
+    
+    // Copy link to clipboard
+    function copyToClipboard() {
+        const copyText = document.getElementById("public_link");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+        
+        const copyMessage = document.getElementById("copy-message");
+        copyMessage.classList.remove("d-none");
+        setTimeout(() => {
+            copyMessage.classList.add("d-none");
+        }, 2000);
+    }
+</script>
+{% endblock %}
+
+{% endblock %}

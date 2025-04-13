@@ -1,0 +1,5 @@
+[33mcommit 81851cdb484db65a750b082b1366e29f5e3e5575[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m
+Author: Sorrymakershen <shenxinyu@student.uwa.edu.au>
+Date:   Fri Apr 11 21:08:19 2025 +0800
+
+    Significantly modified the animation effects, modified the interaction logic, and added transition animations with interfaces

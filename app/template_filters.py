@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json as python_json  # 导入标准库的 json 模块
 
 def register_filters(app):
     """Register custom template filters for the Flask app."""
@@ -13,11 +14,11 @@ def register_filters(app):
     @app.template_filter('tojson')
     def convert_to_json(obj):
         """Convert an SQLAlchemy object to a JSON-serializable dict."""
-        from flask import json
+        # 使用标准库的 json 而不是 flask.json
         import decimal
         from app.models.travel_plan import ItineraryItem
         
-        class CustomJSONEncoder(json.JSONEncoder):
+        class CustomJSONEncoder(python_json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, decimal.Decimal):
                     return float(obj)
@@ -40,7 +41,7 @@ def register_filters(app):
                            if not key.startswith('_')}
                 return super(CustomJSONEncoder, self).default(obj)
         
-        return json.dumps(obj, cls=CustomJSONEncoder)
+        return python_json.dumps(obj, cls=CustomJSONEncoder)
     
     @app.context_processor
     def utility_processor():

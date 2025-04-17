@@ -152,7 +152,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
             },
             body: JSON.stringify({
                 is_public: this.checked
@@ -162,7 +162,13 @@
         .then(data => {
             if (data.success) {
                 location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to update public status'));
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating plan visibility');
         });
     });
     

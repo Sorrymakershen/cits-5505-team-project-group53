@@ -85,13 +85,14 @@
                     
                     {% if shares %}
                         <div class="list-group">
-                            {% for share in shares %}                                <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;">
+                            {% for share in shares %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;">
                                     <div>
-                                        <h6 class="mb-0">{{ share.shared_email }}</h6>
+                                        <h6 class="mb-0">{{ share.user.username or share.email }}</h6>
                                         <small class="text-muted">
-                                            {% if not share.can_edit %}
+                                            {% if share.permission == 'view' %}
                                                 View Only
-                                            {% else %}
+                                            {% elif share.permission == 'edit' %}
                                                 Can Edit
                                             {% endif %}
                                         </small>

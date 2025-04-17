@@ -100,10 +100,11 @@
                 </div>
             </div>
         </div>
-          <!-- Existing Travel Plans Section -->
+        
+        <!-- Existing Travel Plans Section -->
         <div class="row mb-4">
             <div class="col">
-                <h2>Your Plans</h2>
+                <h2>Your Existing Plans</h2>
             </div>
         </div>
         
@@ -207,8 +208,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalButtonText = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
-          // Geocode the address using Nominatim (OpenStreetMap) with English language preference
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&accept-language=en`)
+        
+        // Geocode the address using Nominatim (OpenStreetMap)
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}`)
             .then(response => response.json())
             .then(data => {
                 button.disabled = false;
@@ -400,8 +402,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        debounceTimeout = setTimeout(() => {            // Fetch location suggestions using Nominatim with English language preference
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=en`)
+        debounceTimeout = setTimeout(() => {
+            // Fetch location suggestions using Nominatim
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.length > 0) {

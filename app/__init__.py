@@ -1,23 +1,29 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
+import os 
 
-# Initialize extensions
-db = SQLAlchemy()
+# 先创建 Flask 应用实例
+app = Flask(__name__)
+# 配置应用
+app.config['SECRET_KEY'] = 'your-secret-key'  # Change this in production
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 然后初始化扩展
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+
+# 导入模型，确保迁移能够检测到它们
+from app.models import user, travel_plan, memory
 
 def create_app():
-    app = Flask(__name__)
-    
-    # Configure the app
-    app.config['SECRET_KEY'] = 'your-secret-key'  # Change this in production
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Initialize extensions with the app
-    db.init_app(app)
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    # 注册蓝图和其他设置
+    # 因为主应用实例已经创建，这个函数主要用来添加配置
     
     # Import user loader function
     from app import auth

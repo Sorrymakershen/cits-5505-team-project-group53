@@ -1,3 +1,4 @@
+# filepath: c:\Users\shenx\Desktop\cits-5505-team-project-group53\app\routes\planner.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -10,13 +11,22 @@ planner_bp = Blueprint('planner', __name__, url_prefix='/planner')
 @login_required
 def index():
     """Travel planner main page listing user's travel plans"""
-    plans = TravelPlan.query.filter_by(user_id=current_user.id).order_by(TravelPlan.start_date).all()
-    return render_template('planner/index.html', plans=plans)
+    # Get plans created by the user
+    owned_plans = TravelPlan.query.filter_by(user_id=current_user.id).order_by(TravelPlan.start_date).all()
+    
+    # Get plans shared with the user
+    shared_with_me = PlanShare.query.filter_by(shared_email=current_user.email).all()
+    shared_plans = [share.travel_plan for share in shared_with_me]
+    
+    return render_template('planner/index.html', plans=owned_plans, shared_plans=shared_plans)
 
 @planner_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_plan():
     """Create a new travel plan"""
+    # Pre-fill destination from request args (for recommendations integration)
+    destination = request.args.get('destination', '')
+    
     if request.method == 'POST':
         # Get form data
         title = request.form.get('title')
@@ -45,7 +55,7 @@ def create_plan():
         flash('Travel plan created successfully!', 'success')
         return redirect(url_for('planner.view_plan', plan_id=plan.id))
         
-    return render_template('planner/create.html')
+    return render_template('planner/create.html', destination=destination)
 
 @planner_bp.route('/<int:plan_id>')
 @login_required
@@ -227,13 +237,63 @@ def delete_plan(plan_id):
     """Delete a travel plan"""
     plan = TravelPlan.query.get_or_404(plan_id)
     
-    # Only the owner can delete the plan
+    # Check if user owns this plan
     if plan.user_id != current_user.id:
         flash('You do not have permission to delete this plan', 'danger')
         return redirect(url_for('planner.index'))
-        
+    
+    # Delete the plan
     db.session.delete(plan)
     db.session.commit()
     
     flash('Travel plan deleted successfully', 'success')
     return redirect(url_for('planner.index'))
+
+@planner_bp.route('/<int:plan_id>/toggle_public', methods=['POST'])
+@login_required
+def toggle_public(plan_id):
+    """Toggle the public/private status of a travel plan"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user owns this plan
+    if plan.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'You do not have permission to modify this plan'}), 403
+    
+    # Get data from request
+    data = request.json
+    is_public = data.get('is_public', False)
+    
+    # Update the plan's public status
+    plan.is_public = is_public
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'is_public': plan.is_public,
+        'message': f'Plan is now {"public" if is_public else "private"}'
+    })
+
+@planner_bp.route('/<int:plan_id>/remove_share/<int:share_id>', methods=['POST'])
+@login_required
+def remove_share(plan_id, share_id):
+    """Remove a share from a travel plan"""
+    # Get the plan and check if the current user owns it
+    plan = TravelPlan.query.get_or_404(plan_id)
+    if plan.user_id != current_user.id:
+        flash('You do not have permission to modify this plan', 'danger')
+        return redirect(url_for('planner.index'))
+    
+    # Get the share and delete it
+    share = PlanShare.query.get_or_404(share_id)
+    
+    # Verify the share belongs to this plan
+    if share.travel_plan_id != plan_id:
+        flash('Invalid share removal request', 'danger')
+        return redirect(url_for('planner.share_plan', plan_id=plan_id))
+    
+    email = share.shared_email
+    db.session.delete(share)
+    db.session.commit()
+    
+    flash(f'Sharing with {email} has been removed', 'success')
+    return redirect(url_for('planner.share_plan', plan_id=plan_id))

@@ -30,20 +30,14 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="permission" class="form-label">Permission Level</label>
-                            <select class="form-select" id="permission" name="permission" required>
-                                <option value="view">View Only</option>
-                                <option value="edit">View and Edit</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="message" class="form-label">Personal Message (Optional)</label>
-                            <textarea class="form-control" id="message" name="message" rows="3" placeholder="Add a note to your invitation..."></textarea>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="can_edit" name="can_edit">
+                                <label class="form-check-label" for="can_edit">Allow editing</label>
+                            </div>
                         </div>
                         
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Send Invitation</button>
+                            <button type="submit" class="btn btn-primary">Share Plan</button>
                         </div>
                     </form>
                 </div>
@@ -61,7 +55,7 @@
                     
                     {% if plan.is_public %}
                         <div class="input-group mb-3">
-                            <input type="text" class="form-control" id="public_link" value="{{ url_for('planner.view_shared_plan', share_code=plan.share_code, _external=True) }}" readonly>
+                            <input type="text" class="form-control" id="public_link" value="{{ url_for('planner.view_plan', plan_id=plan.id, _external=True) }}" readonly>
                             <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
                                 <i class="fas fa-copy"></i>
                             </button>
@@ -88,16 +82,14 @@
                             {% for share in shares %}
                                 <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;">
                                     <div>
-                                        <h6 class="mb-0">{{ share.user.username or share.email }}</h6>
+                                        <h6 class="mb-0">{{ share.shared_email }}</h6>
                                         <small class="text-muted">
-                                            {% if share.permission == 'view' %}
-                                                View Only
-                                            {% elif share.permission == 'edit' %}
+                                            {% if share.can_edit %}
                                                 Can Edit
+                                            {% else %}
+                                                    View Only
                                             {% endif %}
                                         </small>
-                                        <br>
-                                        <small class="text-muted">Shared: {{ share.created_at.strftime('%b %d, %Y') }}</small>
                                     </div>
                                     <form method="post" action="{{ url_for('planner.remove_share', plan_id=plan.id, share_id=share.id) }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to revoke access?');">
@@ -133,53 +125,91 @@
                             <i class="fas fa-money-bill-wave text-success me-2"></i>
                             <span>Budget: ${{ plan.budget }}</span>
                         </div>
-                    {% endif %}
-                    <div class="d-flex align-items-center">
+                    {% endif %}                    <div class="d-flex align-items-center">
                         <i class="fas fa-map-marked-alt text-info me-2"></i>
-                        <span>{{ plan.itinerary_items.count() }} Activities</span>
+                                <span>{{ plan.itinerary_items.count() }} Activities</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    // Toggle public status of plan
-    document.getElementById('make_public').addEventListener('change', function() {
-        fetch('{{ url_for("planner.toggle_public", plan_id=plan.id) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                is_public: this.checked
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        });
-    });
+    // Basic page initialization check
+    console.log('Share page script initialized');
     
-    // Copy link to clipboard
-    function copyToClipboard() {
-        const copyText = document.getElementById("public_link");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999);
-        document.execCommand("copy");
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded');
         
-        const copyMessage = document.getElementById("copy-message");
-        copyMessage.classList.remove("d-none");
-        setTimeout(() => {
-            copyMessage.classList.add("d-none");
-        }, 2000);
-    }
+        // Check if elements exist
+        const makePublicCheckbox = document.getElementById('make_public');
+        if (makePublicCheckbox) {
+            console.log('Found make_public checkbox');
+            
+            // Toggle public status of plan
+            makePublicCheckbox.addEventListener('change', function() {
+                console.log('Checkbox changed:', this.checked);
+                try {
+                    fetch('{{ url_for("planner.toggle_public", plan_id=plan.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            is_public: this.checked
+                        })
+                    })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch Error:', error);
+                        alert('Failed to update plan visibility. Please try again.');
+                    });
+                } catch (e) {
+                    console.error('Exception:', e);
+                }
+            });
+        } else {
+            console.error('make_public checkbox not found');
+        }
+        
+        // Copy link to clipboard
+        window.copyToClipboard = function() {
+            try {
+                const copyText = document.getElementById("public_link");
+                if (!copyText) {
+                    console.error('public_link element not found');
+                    return;
+                }
+                
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                document.execCommand("copy");
+                
+                const copyMessage = document.getElementById("copy-message");
+                if (copyMessage) {
+                    copyMessage.classList.remove("d-none");
+                    setTimeout(() => {
+                        copyMessage.classList.add("d-none");
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error('Copy error:', e);
+            }        };
+    });
 </script>
-{% endblock %}
-
 {% endblock %}

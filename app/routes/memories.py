@@ -31,6 +31,9 @@ def create_memory():
         emotional_rating = int(request.form.get('emotional_rating', 3))
         is_public = 'is_public' in request.form
         tags = request.form.get('tags', '').split(',')
+          # Convert empty string values to None for float fields
+        lat = float(lat) if lat.strip() else None
+        lng = float(lng) if lng.strip() else None
         
         # Create new memory
         memory = Memory(

@@ -17,6 +17,9 @@ def index():
 @login_required
 def create_plan():
     """Create a new travel plan"""
+    # Pre-fill destination from request args (for recommendations integration)
+    destination = request.args.get('destination', '')
+    
     if request.method == 'POST':
         # Get form data
         title = request.form.get('title')
@@ -45,7 +48,7 @@ def create_plan():
         flash('Travel plan created successfully!', 'success')
         return redirect(url_for('planner.view_plan', plan_id=plan.id))
         
-    return render_template('planner/create.html')
+    return render_template('planner/create.html', destination=destination)
 
 @planner_bp.route('/<int:plan_id>')
 @login_required

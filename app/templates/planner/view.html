@@ -85,9 +85,8 @@
     <!-- Map and Itinerary -->
     <div class="row">
         <div class="col-lg-7 mb-4 animate fade-in">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div id="planMap" class="map-container" data-items='{{ plan.itinerary_items.all() | tojson }}'>
+            <div class="card">                <div class="card-body p-0">
+                    <div id="planMap" class="map-container" data-items='{{ itinerary_items_json | tojson }}'>
                         <!-- Map will be inserted here by JavaScript -->
                     </div>
                 </div>

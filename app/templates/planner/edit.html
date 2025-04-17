@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Travel Plan - {{ plan.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <div class="d-flex align-items-center mb-2">
+                <a href="{{ url_for('planner.view_plan', plan_id=plan.id) }}" class="text-decoration-none me-3">
+                    <i class="fas fa-arrow-left"></i> Back to Plan
+                </a>
+            </div>
+            <h1>Edit Travel Plan</h1>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card animate fade-in">
+                <div class="card-body p-4">
+                    <form method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Trip Name</label>
+                            <input type="text" class="form-control" id="title" name="title" value="{{ plan.title }}" required>
+                            <div class="invalid-feedback">Please give your trip a name.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="destination" class="form-label">Destination</label>
+                            <input type="text" class="form-control" id="destination" name="destination" value="{{ plan.destination }}" required>
+                            <div class="invalid-feedback">Please enter a destination.</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ plan.start_date.strftime('%Y-%m-%d') }}" required>
+                                <div class="invalid-feedback">Please select a start date.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ plan.end_date.strftime('%Y-%m-%d') }}" required>
+                                <div class="invalid-feedback">Please select an end date.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="budget" class="form-label">Budget (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="budget" name="budget" min="0" step="0.01" value="{{ plan.budget }}">
+                            </div>
+                            <div class="form-text">Optional. Leave blank if you haven't set a budget yet.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="interests" class="form-label">Interests</label>
+                            <textarea class="form-control" id="interests" name="interests" rows="3" placeholder="E.g., adventure, beaches, food, culture, relaxation...">{{ plan.interests }}</textarea>
+                            <div class="form-text">What are you interested in experiencing during this trip?</div>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="is_public" name="is_public" {% if plan.is_public %}checked{% endif %}>
+                            <label class="form-check-label" for="is_public">
+                                Make this plan public
+                            </label>
+                            <div class="form-text">Public plans can be viewed by anyone with the link</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('planner.view_plan', plan_id=plan.id) }}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure end date is after start date
+    document.getElementById('start_date').addEventListener('change', function() {
+        document.getElementById('end_date').setAttribute('min', this.value);
+        
+        // If end date is before start date, update it
+        const endDate = document.getElementById('end_date');
+        if (endDate.value && endDate.value < this.value) {
+            endDate.value = this.value;
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

@@ -66,11 +66,27 @@ def view_plan(plan_id):
     
     # Calculate total cost from all itinerary items
     total_cost = 0
+    
+    # Prepare itinerary items for JSON serialization
+    itinerary_items_json = []
     for item in plan.itinerary_items:
         if item.cost:
             total_cost += item.cost
+        
+        # Create a serializable dictionary for each item
+        itinerary_items_json.append({
+            'id': item.id,
+            'day': item.day,
+            'time': item.time,
+            'activity': item.activity,
+            'location': item.location,
+            'lat': item.lat,
+            'lng': item.lng,
+            'cost': float(item.cost) if item.cost else 0,
+            'notes': item.notes
+        })
             
-    return render_template('planner/view.html', plan=plan, total_cost=total_cost)
+    return render_template('planner/view.html', plan=plan, total_cost=total_cost, itinerary_items_json=itinerary_items_json)
 
 @planner_bp.route('/<int:plan_id>/edit', methods=['GET', 'POST'])
 @login_required

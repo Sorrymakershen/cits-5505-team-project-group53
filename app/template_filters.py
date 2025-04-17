@@ -15,11 +15,24 @@ def register_filters(app):
         """Convert an SQLAlchemy object to a JSON-serializable dict."""
         from flask import json
         import decimal
+        from app.models.travel_plan import ItineraryItem
         
         class CustomJSONEncoder(json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, decimal.Decimal):
                     return float(obj)
+                if isinstance(obj, ItineraryItem):
+                    return {
+                        'id': obj.id,
+                        'day': obj.day,
+                        'time': obj.time,
+                        'activity': obj.activity,
+                        'location': obj.location,
+                        'lat': obj.lat,
+                        'lng': obj.lng,
+                        'cost': float(obj.cost) if obj.cost else 0,
+                        'notes': obj.notes
+                    }
                 if hasattr(obj, 'isoformat'):
                     return obj.isoformat()
                 if hasattr(obj, '__dict__'):

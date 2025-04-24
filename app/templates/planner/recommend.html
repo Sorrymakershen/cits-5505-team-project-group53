@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Smart Travel Recommendations{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center mb-2">
+                <a href="{{ url_for('main.index') }}" class="text-decoration-none me-3">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </div>
+            <h1 class="mb-2">Smart Travel Recommendations</h1>
+            <p class="text-muted">Get personalized travel suggestions based on your preferences</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-5">
+            <!-- Preferences Form -->
+            <div class="card animate fade-in mb-4">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Your Travel Preferences</h3>
+                    <form id="recommendationForm" method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="destination" class="form-label">Destination (City, Country, or Region)</label>
+                            <input type="text" class="form-control" id="destination" name="destination" placeholder="e.g. Paris, Japan, Southeast Asia">
+                            <div class="form-text">Leave blank to get global recommendations</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="interests" class="form-label">Travel Interests</label>
+                            <select class="form-select" id="interests" name="interests" required>
+                                <option value="" selected disabled>Select your primary interest</option>
+                                <option value="beaches">Beaches & Islands</option>
+                                <option value="mountains">Mountains & Hiking</option>
+                                <option value="cities">Urban Exploration</option>
+                                <option value="culture">Culture & History</option>
+                                <option value="food">Food & Cuisine</option>
+                                <option value="adventure">Adventure & Sports</option>
+                                <option value="nature">Nature & Wildlife</option>
+                                <option value="relax">Relaxation & Wellness</option>
+                            </select>
+                            <div class="invalid-feedback">Please select your primary travel interest.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="budget" class="form-label">Budget Range</label>
+                            <select class="form-select" id="budget" name="budget" required>
+                                <option value="" selected disabled>Select your budget range</option>
+                                <option value="budget">Budget (under $50/day)</option>
+                                <option value="moderate">Moderate ($50-150/day)</option>
+                                <option value="luxury">Luxury (over $150/day)</option>
+                            </select>
+                            <div class="invalid-feedback">Please select your budget range.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="season" class="form-label">Preferred Season</label>
+                            <select class="form-select" id="season" name="season">
+                                <option value="" selected disabled>Select preferred season</option>
+                                <option value="spring">Spring</option>
+                                <option value="summer">Summer</option>
+                                <option value="fall">Fall</option>
+                                <option value="winter">Winter</option>
+                                <option value="any">Any Season</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="duration" class="form-label">Trip Duration</label>
+                            <select class="form-select" id="duration" name="duration">
+                                <option value="" selected disabled>Select trip duration</option>
+                                <option value="weekend">Weekend (1-3 days)</option>
+                                <option value="week">One Week</option>
+                                <option value="twoweeks">Two Weeks</option>
+                                <option value="month">One Month or More</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="getRecommendations">
+                                <i class="fas fa-lightbulb me-2"></i> Get Recommendations
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-7">
+            <!-- Results Display -->
+            <div class="card animate fade-in" style="animation-delay: 0.2s;">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Recommended Destinations</h3>
+                    <div id="resultsContainer" class="d-none">
+                        <div id="recommendationMap" style="height: 400px; width: 100%; border-radius: 8px;" class="mb-4"></div>
+                        
+                        <div id="destinationList" class="list-group mb-3">
+                            <!-- Recommendations will be listed here -->
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> 
+                            Click on any destination to see more details or create a travel plan for it.
+                        </div>
+                    </div>
+                    
+                    <div id="loadingIndicator" class="text-center d-none">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Finding the perfect destinations for you...</p>
+                    </div>
+                    
+                    <div id="emptyState" class="text-center py-5">
+                        <i class="fas fa-globe fa-3x text-muted mb-3"></i>
+                        <h5>Enter your preferences</h5>
+                        <p class="text-muted">Complete the form and click "Get Recommendations" to discover your next adventure.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map with default view
+        const map = L.map('recommendationMap').setView([20, 0], 2);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Handle form submission
+        const form = document.getElementById('recommendationForm');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const emptyState = document.getElementById('emptyState');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const destinationList = document.getElementById('destinationList');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            loadingIndicator.classList.remove('d-none');
+            emptyState.classList.add('d-none');
+            resultsContainer.classList.add('d-none');
+            
+            // Get form data
+            const formData = new FormData(form);
+            const preferences = Object.fromEntries(formData.entries());
+            
+            // Make API request
+            fetch('{{ url_for("planner.get_recommendations") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(preferences)
+            })
+            .then(response => response.json())            .then(data => {
+                // Hide loading, show results
+                loadingIndicator.classList.add('d-none');
+                resultsContainer.classList.remove('d-none');
+                
+                // Clear previous markers and list
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Marker) {
+                        map.removeLayer(layer);
+                    }
+                });
+                destinationList.innerHTML = '';
+                
+                // Add user's requested destination to the map if provided
+                if (data.user_destination && data.user_destination.coords) {
+                    const userDestMarker = L.marker([
+                        data.user_destination.coords.lat,
+                        data.user_destination.coords.lng
+                    ], {
+                        icon: L.divIcon({
+                            className: 'user-destination-marker',
+                            html: '<i class="fas fa-star text-warning" style="font-size: 24px;"></i>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(map);
+                    
+                    userDestMarker.bindPopup(`
+                        <div class="map-popup">
+                            <h6>Your Destination: ${data.user_destination.name}</h6>
+                            <p>Here are some recommendations around this area.</p>
+                        </div>
+                    `);
+                    
+                    // Center map on user's destination initially
+                    map.setView([
+                        data.user_destination.coords.lat,
+                        data.user_destination.coords.lng
+                    ], 5);
+                }
+                
+                // Display recommendations
+                if (data.recommendations && data.recommendations.length > 0) {
+                    const bounds = [];
+                    
+                    // Add a small header to list if we have user destination
+                    if (data.user_destination) {
+                        const listHeader = document.createElement('div');
+                        listHeader.className = "alert alert-success mb-3";
+                        listHeader.innerHTML = `
+                            <i class="fas fa-info-circle me-2"></i>
+                            Recommendations for <strong>${data.user_destination.name}</strong>
+                        `;
+                        destinationList.appendChild(listHeader);
+                    }
+                    
+                    data.recommendations.forEach((place, index) => {
+                        // Add marker to map
+                        const marker = L.marker([place.lat, place.lng]).addTo(map);
+                        marker.bindPopup(`
+                            <div class="map-popup">
+                                <h6>${place.name}</h6>
+                                <p>${place.description}</p>
+                                <a href="{{ url_for('planner.create_plan') }}?destination=${encodeURIComponent(place.name)}" 
+                                   class="btn btn-sm btn-primary">Plan a Trip</a>
+                            </div>
+                        `);
+                        
+                        bounds.push([place.lat, place.lng]);
+                        
+                        // Add to list
+                        const listItem = document.createElement('a');
+                        listItem.href = "#";
+                        listItem.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+                        listItem.innerHTML = `
+                            <div>
+                                <h5 class="mb-1">${place.name}</h5>
+                                <p class="mb-1 small">${place.description}</p>
+                                <div class="d-flex gap-2 mt-2">
+                                    <small class="text-muted"><i class="fas fa-tag me-1"></i>${place.category}</small>
+                                    <small class="text-muted"><i class="fas fa-dollar-sign me-1"></i>${place.budget_level}</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">${index + 1}</span>
+                        `;
+                        
+                        // When list item is clicked, open the popup
+                        listItem.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            map.setView([place.lat, place.lng], 10);
+                            marker.openPopup();
+                        });
+                        
+                        destinationList.appendChild(listItem);
+                    });
+                    
+                    // Fit map to show all markers
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                } else {
+                    // No results
+                    destinationList.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-map-marked-alt fa-2x text-muted mb-3"></i>
+                            <p>No destinations match your criteria. Try adjusting your preferences.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching recommendations:', error);
+                loadingIndicator.classList.add('d-none');
+                resultsContainer.classList.remove('d-none');
+                destinationList.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Something went wrong. Please try again later.
+                    </div>
+                `;
+            });
+        });
+    });
+</script>
+{% endblock %}

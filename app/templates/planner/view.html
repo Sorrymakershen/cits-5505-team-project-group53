@@ -332,7 +332,41 @@
     {% endif %}
 </div>
 
-<!-- Time Editor Modal -->
+<!-- Day and Time Editor Modal -->
+<div class="modal fade" id="dayTimeEditorModal" tabindex="-1" aria-labelledby="dayTimeEditorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dayTimeEditorModalLabel">Edit Day & Time</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editDayTimeItemId">
+                <div class="mb-3">
+                    <label for="editDaySelect" class="form-label">Day</label>
+                    <select id="editDaySelect" class="form-select">
+                        {% for i in range(1, (plan.end_date - plan.start_date).days + 2) %}
+                            {% set current_date = plan.start_date + day_timedelta(i-1) %}
+                            <option value="{{ i }}">Day {{ i }} - {{ current_date | datetime_format }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="editVisitTime" class="form-label">Visit Time</label>
+                    <input type="time" class="form-control" id="editVisitTime">
+                    <div class="form-text">Set a specific time for this activity (optional)</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveDayTimeBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Time Editor Modal (Potentially redundant now) -->
 <div class="modal fade" id="timeEditorModal" tabindex="-1" aria-labelledby="timeEditorModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -390,6 +424,7 @@
         // Setup modals - 将modal实例定义在更高的作用域内
         const timeEditorModal = new bootstrap.Modal(document.getElementById('timeEditorModal'));
         const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const dayTimeEditorModal = new bootstrap.Modal(document.getElementById('dayTimeEditorModal'));
         
         // Time edit button click handler
         document.querySelectorAll('.edit-time-btn').forEach(btn => {
@@ -537,7 +572,7 @@
         // Confirm delete button click handler
         document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
             const itemId = document.getElementById('deleteItemId').value;
-            
+
             // Delete item via AJAX
             fetch('{{ url_for("planner.delete_itinerary_item", plan_id=plan.id) }}', {
                 method: 'POST',
@@ -551,63 +586,80 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal - 使用modal关闭按钮直接点击
+                    // Close modal
                     document.getElementById('deleteConfirmModal').querySelector('.btn-close').click();
-                    
+
+                    console.log("Delete successful. Received data:", data); // Log received data
+
                     // Remove the item from the UI with animation
                     const itemElement = document.getElementById(`item-${itemId}`);
                     if (itemElement) {
+                        // ... UI removal animation logic ...
                         itemElement.style.transition = 'all 0.3s ease';
                         itemElement.style.opacity = '0';
                         itemElement.style.maxHeight = '0';
                         itemElement.style.overflow = 'hidden';
-                        
+
                         setTimeout(() => {
                             itemElement.remove();
-                            
-                            // Check if there are no more items for this day
-                            const daySection = itemElement.closest('.mb-4');
+                            // Check if the day section is now empty
+                            const daySection = itemElement.closest('.day-container'); // Use day-container
                             if (daySection && daySection.querySelectorAll('.itinerary-item').length === 0) {
+                                // Remove the day header and the container
+                                const dayHeader = daySection.querySelector('.itinerary-day');
+                                if(dayHeader) dayHeader.remove();
                                 daySection.remove();
                             }
-                            
-                            // update cost 
-                            if (data.total_cost !== undefined) {
-                                // update total cost
-                                const totalCostElements = document.querySelectorAll('.fs-4, .small.text-muted.mb-4 span:first-child');
-                                totalCostElements.forEach(el => {
-                                    if (el.classList.contains('fs-4')) {
-                                        el.textContent = '$' + data.total_cost;
-                                    } else {
-                                        el.textContent = 'Spent: $' + data.total_cost;
-                                    }
-                                });
-                                
-                                // update progress bar
-                                const budgetAmount = {{ plan.budget or 0 }};
-                                if (budgetAmount > 0) {
-                                    const progressBar = document.querySelector('.progress-bar');
-                                    if (progressBar) {
-                                        const percentage = (data.total_cost / budgetAmount) * 100;
-                                        progressBar.style.width = percentage + '%';
-                                        progressBar.setAttribute('aria-valuenow', percentage);
-                                    }
-                                }
-                            }
-                            
-                            // if map is initialized, update markers
-                            if (window.planMap && data.itinerary_items_json) {
-                                try {
-                                    updateMapMarkers(data.itinerary_items_json);
-                                } catch (mapError) {
-                                    console.error('Error updating map:', mapError);
-                                }
-                            }
-                            
-                            
-                            showToast('Activity removed from your itinerary', 'success');
-                        }, 300);
+                        }, 300); // Delay removal for animation
                     }
+
+
+                    // update cost
+                    if (data.total_cost !== undefined) {
+                        console.log("Updating total cost display."); // Log cost update
+                        // ... update total cost display logic ...
+                        const totalCostElements = document.querySelectorAll('.fs-4, .small.text-muted.mb-4 span:first-child');
+                        totalCostElements.forEach(el => {
+                            if (el.classList.contains('fs-4')) {
+                                el.textContent = '$' + data.total_cost;
+                            } else {
+                                el.textContent = 'Spent: $' + data.total_cost;
+                            }
+                        });
+
+                        // ... update progress bar logic ...
+                        const budgetAmount = {{ plan.budget or 0 }};
+                        if (budgetAmount > 0) {
+                            const progressBar = document.querySelector('.progress-bar');
+                            if (progressBar) {
+                                const percentage = (data.total_cost / budgetAmount) * 100;
+                                progressBar.style.width = percentage + '%';
+                                progressBar.setAttribute('aria-valuenow', percentage);
+                            }
+                        }
+                    }
+
+                    // if map is initialized, update markers
+                    if (window.planMap && data.itinerary_items_json) {
+                        console.log("Map instance found. Calling updateMapMarkers with:", data.itinerary_items_json); // Log before calling updateMapMarkers
+                        try {
+                            updateMapMarkers(data.itinerary_items_json);
+                            console.log("updateMapMarkers called successfully after delete."); // Log after calling
+                        } catch (mapError) {
+                            console.error('Error updating map after delete:', mapError); // Log specific error
+                        } 
+                    } else {
+                        // Log why updateMapMarkers wasn't called
+                        if (!window.planMap) {
+                            console.log("Map update skipped: window.planMap is not defined.");
+                        }
+                        if (!data.itinerary_items_json) {
+                            console.log("Map update skipped: data.itinerary_items_json is missing or empty in response.");
+                        }
+                    }
+
+                    showToast('Activity removed successfully', 'success');
+
                 } else {
                     showToast(data.message || 'Error removing activity', 'danger');
                 }
@@ -617,7 +669,7 @@
                 showToast('An error occurred while removing the activity', 'danger');
             });
         });
-
+        
         // Toast function for feedback
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
@@ -819,22 +871,24 @@
                 return response.json();
             })
             .then(data => {
+                // Re-enable button and hide spinner
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = '<i class="fas fa-plus me-1"></i> Add';
+                }
+                
                 if (data.success) {
-                    // display success message
-                    const successAlert = document.createElement('div');
-                    successAlert.className = 'alert alert-success alert-dismissible fade show mt-3';
-                    successAlert.innerHTML = `
-                        ${data.message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
-                    recommendationsContainer.prepend(successAlert);
+                    // Remove the success toast message
+                    // showToast('Activity has been added to your itinerary', 'success');
                     
-                    // dynamically add the new item to the itinerary
+                    // Update itinerary section dynamically
                     updateItinerary();
                     
                     // update map markers if map is initialized
+                    // Ensure updateMapMarkers is called with the correct data after adding
                     if (data.itinerary_items_json && window.planMap) {
                         try {
+                            console.log('Calling updateMapMarkers from addRecommendation success:', data.itinerary_items_json); // Log data before calling
                             updateMapMarkers(data.itinerary_items_json);
                             console.log('Map markers updated after adding recommendation');
                         } catch (mapError) {
@@ -844,26 +898,13 @@
                     
                     // update the button state
                     if (buttonElement) {
-                        buttonElement.disabled = true;
-                        buttonElement.innerHTML = '<i class="fas fa-check"></i> Added';
-                        buttonElement.classList.remove('btn-outline-primary');
+                        buttonElement.textContent = 'Added';
+                        buttonElement.classList.remove('btn-primary');
                         buttonElement.classList.add('btn-success');
+                        buttonElement.disabled = true;
                     }
                 } else {
-                    // display error message
-                    const errorAlert = document.createElement('div');
-                    errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-3';
-                    errorAlert.innerHTML = `
-                        ${data.message || 'Error adding activity'}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
-                    recommendationsContainer.prepend(errorAlert);
-                    
-                    // reset button state
-                    if (buttonElement) {
-                        buttonElement.disabled = false;
-                        buttonElement.innerHTML = '<i class="fas fa-plus"></i> Add';
-                    }
+                    showToast(data.message || 'Failed to add activity', 'danger');
                 }
             })
             .catch(error => {
@@ -1087,7 +1128,9 @@
                     // Update map markers if map is initialized
                     if (data.itinerary_items_json && window.planMap) {
                         try {
+                            console.log('Calling updateMapMarkers from updateItinerary success:', data.itinerary_items_json); // Log data before calling
                             updateMapMarkers(data.itinerary_items_json);
+                            console.log('Map markers updated via updateItinerary'); // Add log for debugging
                         } catch (mapError) {
                             console.error('Update map error:', mapError);
                         }
@@ -1217,14 +1260,20 @@
 
     // Initialize map
     function initializePlanMap() {
-        // Get map element and itinerary item data
+        // Initialize map
         const mapElement = document.getElementById('planMap');
-        if (!mapElement) return;
+        if (!mapElement) {
+            console.error('Map container #planMap not found!'); // Log if container missing
+            return;
+        }
         
         // Get itinerary item data from data attribute
         let itineraryItems;
         try {
-            itineraryItems = JSON.parse(mapElement.dataset.items || '[]');
+            const itemsData = mapElement.dataset.items || '[]';
+            console.log('Raw data-items attribute:', itemsData); // Log raw data
+            itineraryItems = JSON.parse(itemsData);
+            console.log('Parsed initial itinerary items for map:', itineraryItems); // Log parsed data
         } catch (e) {
             console.error('Error parsing itinerary item data:', e);
             itineraryItems = [];
@@ -1247,6 +1296,7 @@
     
     // Update map markers
     function updateMapMarkers(items) {
+        console.log('Updating map markers with items:', items); // Log items received
         const map = window.planMap;
         if (!map) {
             console.error('Map instance not found');
@@ -1294,6 +1344,27 @@
                 // Create marker
                 const marker = L.marker([lat, lng]).addTo(map);
                 
+                // --- Add permanent tooltip ---
+                let tooltipContent = '';
+                if (item.day) {
+                    tooltipContent += `Day ${item.day}`;
+                }
+                if (item.time) {
+                    // Add a separator if both day and time exist
+                    if (tooltipContent) tooltipContent += `<br>`; 
+                    tooltipContent += `${item.time}`;
+                }
+
+                if (tooltipContent) {
+                    marker.bindTooltip(tooltipContent, {
+                        permanent: true, // Keep tooltip always visible
+                        direction: 'top', // Show above the marker
+                        offset: [0, -15], // Adjust position slightly
+                        className: 'map-tooltip' // Add a class for potential styling
+                    });
+                }
+                // --- End of tooltip addition ---
+
                 // Add popup information
                 let popupContent = `<h5>${item.activity || 'Unnamed Activity'}</h5>`;
                 if (item.location) popupContent += `<p>${item.location}</p>`;

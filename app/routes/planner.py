@@ -437,7 +437,9 @@ def ai_recommendations(plan_id):
             "location": "Location",
             "cost": Estimated cost (number only),
             "description": "Brief description",
-            "time_spent": "Estimated time (e.g.: 2 hours)"
+            "time_spent": "Estimated time (e.g.: 2 hours)",
+            "latitude": Approximate latitude (number only),
+            "longitude": Approximate longitude (number only)
         }},
         ...
     ]
@@ -474,6 +476,21 @@ def ai_recommendations(plan_id):
             if json_start >= 0 and json_end > json_start:
                 json_str = response_text[json_start:json_end]
                 recommendations = json.loads(json_str)
+                
+                # Ensure lat/lng are parsed correctly if present
+                for rec in recommendations:
+                    rec['lat'] = rec.pop('latitude', None) # Rename latitude to lat
+                    rec['lng'] = rec.pop('longitude', None) # Rename longitude to lng
+                    # Attempt to convert to float, default to None if invalid
+                    try:
+                        rec['lat'] = float(rec['lat']) if rec['lat'] is not None else None
+                    except (ValueError, TypeError):
+                        rec['lat'] = None
+                    try:
+                        rec['lng'] = float(rec['lng']) if rec['lng'] is not None else None
+                    except (ValueError, TypeError):
+                        rec['lng'] = None
+
                 return jsonify({
                     'success': True, 
                     'recommendations': recommendations,
@@ -535,20 +552,25 @@ def add_recommendation(plan_id):
         cost = float(cost_raw) if cost_raw and str(cost_raw).strip() else 0
         notes = data.get('description')
         
-        # add lat/lng handling
+        # add lat/lng handling - ensure they are received correctly
         lat = None
         lng = None
         
         # try to extract lat/lng from the data
-        if 'lat' in data and data['lat'] and 'lng' in data and data['lng']:
+        if 'lat' in data and data['lat'] is not None and 'lng' in data and data['lng'] is not None:
             try:
                 lat = float(data['lat'])
                 lng = float(data['lng'])
-            except (ValueError, TypeError):
+                print(f"DEBUG - Parsed lat/lng: {lat}, {lng}") # Add log for parsed coords
+            except (ValueError, TypeError) as e:
                 # if conversion fails, set lat/lng to None
+                print(f"DEBUG - Error parsing lat/lng: {e}. Data was: lat={data.get('lat')}, lng={data.get('lng')}")
                 lat = None
                 lng = None
-        
+        else:
+             print(f"DEBUG - Lat/Lng not found or null in data: lat={data.get('lat')}, lng={data.get('lng')}")
+
+
         # create a new itinerary item
         item = ItineraryItem(
             day=day,
@@ -727,10 +749,42 @@ def delete_itinerary_item(plan_id):
     # Delete the item
     db.session.delete(item)
     db.session.commit()
-    
+    print(f"DEBUG: Deleted item with ID: {item_id}") # Log deletion confirmation
+
+    # After deleting, fetch the updated list of itinerary items
+    updated_items = ItineraryItem.query.filter_by(travel_plan_id=plan_id).order_by(ItineraryItem.day, ItineraryItem.time).all()
+    print(f"DEBUG: Fetched {len(updated_items)} remaining items for plan {plan_id}") # Log count of remaining items
+
+    itinerary_items_json = []
+    total_cost = 0
+    try:
+        for updated_item in updated_items:
+            if updated_item.cost:
+                total_cost += updated_item.cost
+            itinerary_items_json.append({
+                'id': updated_item.id,
+                'day': updated_item.day,
+                'time': updated_item.time,
+                'activity': updated_item.activity,
+                'location': updated_item.location,
+                'lat': updated_item.lat,
+                'lng': updated_item.lng,
+                'cost': float(updated_item.cost) if updated_item.cost else 0,
+                'notes': updated_item.notes
+            })
+        print(f"DEBUG: Successfully built itinerary_items_json with {len(itinerary_items_json)} items.") # Log successful build
+    except Exception as e:
+        print(f"ERROR: Failed to build itinerary_items_json: {e}") # Log any error during build
+        itinerary_items_json = [] # Ensure it's an empty list on error
+
+    # Log the data just before returning
+    print(f"DEBUG: Returning JSON data: success=True, message='Activity removed successfully', itinerary_items_json={json.dumps(itinerary_items_json)}, total_cost={total_cost}")
+
     return jsonify({
         'success': True,
-        'message': 'Activity removed successfully'
+        'message': 'Activity removed successfully',
+        'itinerary_items_json': itinerary_items_json,
+        'total_cost': total_cost
     })
 
 @planner_bp.route('/<int:plan_id>/update_item_time', methods=['POST'])
@@ -1174,3 +1228,66 @@ def location_recommendations():
             'success': False, 
             'message': f'Error getting recommendations: {str(e)}'
         }), 500
+
+@planner_bp.route('/<int:plan_id>/update_item_day_time', methods=['POST'])
+@login_required
+def update_item_day_time(plan_id):
+    """Update the day and time of an itinerary item."""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    if plan.user_id != current_user.id:
+        # Add permission check for shared plans if necessary
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email
+        ).first()
+        if not shared and not plan.is_public:
+            return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+    data = request.get_json()
+    item_id = data.get('item_id')
+    new_day = data.get('day')
+    new_time_str = data.get('time') # Expected format: HH:mm or empty string
+
+    if not item_id or not new_day:
+        return jsonify({'success': False, 'message': 'Missing item ID or day'}), 400
+
+    item = ItineraryItem.query.filter_by(id=item_id, travel_plan_id=plan_id).first()
+
+    if not item:
+        return jsonify({'success': False, 'message': 'Itinerary item not found'}), 404
+
+    try:
+        item.day = int(new_day)
+
+        # Handle time update
+        if new_time_str:
+            # Validate and potentially store as time object or formatted string
+            try:
+                # Store as string 'HH:MM AM/PM' for consistency with current display?
+                # Or store as time object? Let's try formatting for display consistency.
+                parsed_time = datetime.strptime(new_time_str, '%H:%M').time()
+                item.time = parsed_time.strftime('%I:%M %p').lstrip('0') # Format like '9:30 AM'
+            except ValueError:
+                # Handle invalid time format if necessary, maybe just store raw string?
+                # For now, let's assume valid HH:mm input from <input type="time">
+                 parsed_time = datetime.strptime(new_time_str, '%H:%M').time()
+                 item.time = parsed_time.strftime('%I:%M %p').lstrip('0') # Re-attempt formatting
+                 # If strict validation needed, return error here
+        else:
+            item.time = None # Clear the time
+
+        db.session.commit()
+
+        # Optionally, return updated itinerary data similar to delete/add
+        # This helps keep the frontend perfectly in sync immediately
+        # (Reusing logic from get_itinerary_data might be good here)
+        # For simplicity now, just return success. Frontend will call updateItinerary().
+        return jsonify({'success': True, 'message': 'Item updated successfully'})
+
+    except ValueError:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Invalid day or time format'}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating item day/time: {e}") # Log the error server-side
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500

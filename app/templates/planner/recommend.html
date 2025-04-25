@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Address Map Viewer{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center mb-2">
+                <a href="{{ url_for('main.index') }}" class="text-decoration-none me-3">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </div>
+            <h1 class="mb-2">Address Map Viewer</h1>
+            <p class="text-muted">Enter an address to view its location on the map</p>
+        </div>
+    </div>
+      <div class="row">
+        <div class="col-lg-4">
+            <!-- Address Input Form -->
+            <div class="card animate fade-in mb-4">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Enter Address</h3>
+                    <form id="recommendationForm" method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="destination" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="destination" name="destination" placeholder="e.g.: New York City" required>
+                            <div class="invalid-feedback">Please enter a valid address</div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="getRecommendations">
+                                <i class="fas fa-map-marker-alt me-2"></i> Show on Map
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- AI Recommendations Container -->
+            <div class="card animate fade-in mb-4 d-none" id="aiRecommendationsCard">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">AI Suggestions</h3>
+                    <div id="aiRecommendationsContent">
+                        <!-- AI recommendations will be displayed here -->
+                    </div>
+                    <div id="aiLoadingIndicator" class="text-center mt-3 d-none">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Getting suggestions...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <!-- Map Display -->
+            <div class="card animate fade-in" style="animation-delay: 0.2s;">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Map</h3>
+                    <!-- Map container is always visible -->
+                    <div id="recommendationMap" style="height: 450px; width: 100%; border-radius: 8px;" class="mb-4"></div>
+                    
+                    <div id="loadingIndicator" class="text-center d-none position-absolute top-50 start-50 translate-middle">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading map...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map
+        const mapContainer = document.getElementById('recommendationMap');
+        if (mapContainer) {
+            mapContainer.style.height = '450px';
+            mapContainer.style.width = '100%';
+            mapContainer.style.display = 'block';
+            mapContainer.style.position = 'relative';
+        }
+        
+        // Initialize map, default view world map
+        const map = L.map('recommendationMap').setView([20, 0], 3); // Default centered on world view
+        
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Force map to recalculate size, solving rendering issues
+        setTimeout(function() {
+            map.invalidateSize(true);
+        }, 300);
+        
+        // Create marker variable
+        let marker = null;
+        
+        // Handle form submission
+        const form = document.getElementById('recommendationForm');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get address
+            const address = document.getElementById('destination').value.trim();
+            
+            if (!address) {
+                alert('Please enter a valid address');
+                return;
+            }
+            
+            // Show loading state
+            loadingIndicator.classList.remove('d-none');
+              // Use Nominatim service for geocoding (address to coordinates)
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading state
+                    loadingIndicator.classList.add('d-none');
+                    
+                    if (data && data.length > 0) {
+                        // Get first result
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lon = parseFloat(result.lon);
+                        
+                        // Clear previous marker
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        
+                        // Add new marker
+                        marker = L.marker([lat, lon]).addTo(map);
+                        marker.bindPopup(`
+                            <div class="map-popup">
+                                <h6>${result.display_name}</h6>
+                            </div>
+                        `).openPopup();
+                        
+                        // Center and zoom map
+                        map.setView([lat, lon], 12);
+                        
+                        // Get AI recommendations for this location
+                        getAIRecommendations(result.display_name);
+                    } else {
+                        alert('Address not found. Please try a more detailed address');
+                    }
+                })                .catch(error => {
+                    console.error('Address lookup error:', error);
+                    loadingIndicator.classList.add('d-none');
+                    alert('Address lookup failed. Please try again later');
+                });
+        });
+        
+        // Function to get AI recommendations for a location
+        function getAIRecommendations(location) {
+            const aiRecommendationsCard = document.getElementById('aiRecommendationsCard');
+            const aiRecommendationsContent = document.getElementById('aiRecommendationsContent');
+            const aiLoadingIndicator = document.getElementById('aiLoadingIndicator');
+            
+            // Show the recommendations card and loading indicator
+            aiRecommendationsCard.classList.remove('d-none');
+            aiLoadingIndicator.classList.remove('d-none');
+            
+            // Prepare the query for the AI model
+            const prompt = `I'm planning to visit ${location}. Please provide a brief overview of this location, some interesting facts, and 2-3 must-visit attractions or activities.`;
+            
+            // API endpoint and parameters for the THUDM/GLM-Z1-9B-0414 model
+            const apiUrl = 'https://api.siliconflow.cn/v1/chat/completions';
+            const apiKey = 'sk-rlztracscvkmezznfwsksbafrjbrddugfgjbfxlzszlnntin'; // API key from your request
+            
+            // Prepare the request body
+            const requestBody = {
+                model: "THUDM/GLM-Z1-9B-0414",
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt
+                    }
+                ],
+                stream: false,
+                max_tokens: 512,
+                temperature: 0.7,
+                top_p: 0.7
+            };
+            
+            // Make the API call
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loading indicator
+                aiLoadingIndicator.classList.add('d-none');
+                
+                // Extract and display the AI-generated content
+                const aiResponse = data.choices[0].message.content;
+                
+                // Format the response with some HTML styling
+                aiRecommendationsContent.innerHTML = `
+                    <div class="ai-suggestion">
+                        ${aiResponse.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('AI recommendation error:', error);
+                aiLoadingIndicator.classList.add('d-none');
+                
+                // Show error message
+                aiRecommendationsContent.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to get AI suggestions at this time. Please try again later.
+                    </div>
+                `;
+            });
+        }
+    });
+</script>
+{% endblock %}

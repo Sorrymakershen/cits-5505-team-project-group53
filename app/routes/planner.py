@@ -566,7 +566,22 @@ def add_recommendation(plan_id):
         
         print(f"DEBUG - Added item successfully: id={item.id}")
         
-        # return a JSON response with the new item
+        # add the new item to the itinerary items JSON
+        itinerary_items_json = []
+        for item in plan.itinerary_items:
+            itinerary_items_json.append({
+                'id': item.id,
+                'day': item.day,
+                'time': item.time,
+                'activity': item.activity,
+                'location': item.location,
+                'lat': item.lat,
+                'lng': item.lng,
+                'cost': float(item.cost) if item.cost else 0,
+                'notes': item.notes
+            })
+        
+        # return a JSON response with the new item and all itinerary items
         return jsonify({
             'success': True,
             'message': 'Activity has been added to your itinerary',
@@ -580,7 +595,8 @@ def add_recommendation(plan_id):
                 'lng': item.lng,
                 'cost': float(item.cost) if item.cost else 0,
                 'notes': item.notes
-            }
+            },
+            'itinerary_items_json': itinerary_items_json
         })
         
     except Exception as e:

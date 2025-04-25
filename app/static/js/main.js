@@ -3,6 +3,8 @@
 // variables to track map initialization
 let planMapInitialized = false;
 let memoriesMapInitialized = false;
+// Store map instance globally to access it later
+let planMap = null;
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -117,6 +119,82 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
+// Function to update itinerary section without refreshing page
+function updateItinerary() {
+  console.log('Starting to update itinerary...');
+  fetch(window.location.pathname + '/itinerary_data')
+    .then(response => {
+      console.log('Get response:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Get data successfully:', data);
+      if (data.success) {
+        // update total cost and budget
+        if (data.total_cost !== undefined) {
+          const totalCostElements = document.querySelectorAll('.fs-4, .small.text-muted.mb-4 span:first-child');
+          totalCostElements.forEach(el => {
+            if (el.classList.contains('fs-4')) {
+              el.textContent = '$' + data.total_cost;
+            } else {
+              el.textContent = 'Spent: $' + data.total_cost;
+            }
+          });
+          
+          // update progress bar
+          const progressBar = document.querySelector('.progress-bar');
+          if (progressBar && data.budget) {
+            const percentage = (data.total_cost / data.budget) * 100;
+            progressBar.style.width = percentage + '%';
+            progressBar.setAttribute('aria-valuenow', percentage);
+          }
+        }
+        
+        // 更新行程内容
+        if (data.itinerary_by_day) {
+          console.log('start to update itinerary content');
+          // 使用ID选择器精确查找行程容器
+          const itinerarySection = document.querySelector('#itinerary-container');
+          
+          if (itinerarySection) {
+            let itineraryHTML = '';
+            
+            // 生成行程HTML
+            // ...existing code...
+          } else {
+            console.error('Cannot find itinerary section in DOM');
+          }
+        } else {
+          console.log('No itinerary data to update');
+        }
+        
+        // Update map markers if map is initialized
+        if (data.itinerary_items_json && window.planMap) {
+          try {
+            updateMapMarkers(data.itinerary_items_json);
+          } catch (mapError) {
+            console.error('Update map error:', mapError);
+          }
+        }
+      } else {
+        console.warn('Server returned data indicating operation was unsuccessful:', data.message || 'Unknown error');
+      }
+    })
+    .catch(error => {
+      console.error('Error updating itinerary data:', error);
+      // 不轻易显示错误提示，因为这可能只是前端更新问题，活动已成功添加
+      if (error.toString().includes('TypeError') || error.toString().includes('SyntaxError')) {
+        console.error('Suspected JSON parsing error or DOM operation error:', error);
+      } else {
+        // 只在确定是网络或服务器问题时才显示错误提示
+        showToast('There was an issue updating the page data, but your changes may have been saved.', 'warning');
+      }
+    });
+}
+
 // Timeline animations with intersection observer
 function initializeTimelineAnimations() {
   const timelineItems = document.querySelectorAll('.timeline-item');
@@ -166,6 +244,8 @@ function initializePlanMap() {
   }
   
   const map = L.map('planMap').setView([initialLat, initialLng], initialZoom);
+  // Store map instance globally
+  window.planMap = map;
   
   // Add tile layer (OpenStreetMap)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -174,13 +254,26 @@ function initializePlanMap() {
   }).addTo(map);
   
   // Add markers for each itinerary item
+  addMarkersToMap(map, planItems);
+}
+
+// Function to add markers to map
+function addMarkersToMap(map, items) {
+  // Clear existing markers if any
+  if (map.markerGroup) {
+    map.markerGroup.clearLayers();
+  } else {
+    map.markerGroup = L.layerGroup().addTo(map);
+  }
+
+  // Add markers for each itinerary item
   const markers = [];
-  planItems.forEach(item => {
+  items.forEach(item => {
     if (item.lat && item.lng) {
       const marker = L.marker([item.lat, item.lng], {
         title: item.activity,
         alt: item.activity
-      }).addTo(map);
+      }).addTo(map.markerGroup);
       
       // Create popup with item details
       marker.bindPopup(`
@@ -198,16 +291,22 @@ function initializePlanMap() {
   
   // Create a path connecting all points in order
   if (markers.length > 1) {
-    const points = planItems
+    const points = items
       .filter(item => item.lat && item.lng)
       .map(item => [item.lat, item.lng]);
       
+    // Clear existing polyline if any
+    if (map.routePolyline) {
+      map.routePolyline.remove();
+    }
+    
     const polyline = L.polyline(points, {
       color: '#4285f4',
       weight: 3,
       opacity: 0.7,
       lineJoin: 'round'
     }).addTo(map);
+    map.routePolyline = polyline;
     
     // Zoom map to fit all markers
     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
@@ -216,8 +315,22 @@ function initializePlanMap() {
     animatePolyline(polyline);
   } else if (markers.length === 1) {
     // If only one marker, center on it
-    map.setView([planItems[0].lat, planItems[0].lng], 13);
+    map.setView([items[0].lat, items[0].lng], 13);
   }
+}
+
+// Function to update map markers when new activities are added
+function updateMapMarkers(itemsJson) {
+  // If map is not initialized, do nothing
+  if (!window.planMap) {
+    return;
+  }
+  
+  // Parse items if it's a string
+  const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
+  
+  // Add markers to the map
+  addMarkersToMap(window.planMap, items);
 }
 
 // Initialize map for memories view

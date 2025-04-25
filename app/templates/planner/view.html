@@ -76,6 +76,29 @@
     .day-selector {
         margin-bottom: 1rem;
     }
+   
+    .itinerary-content {
+        flex: 1;
+        min-width: 0; 
+    }
+    .itinerary-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        margin-left: 10px;
+        min-width: 50px; 
+    }
+    @media (max-width: 767px) {
+        .itinerary-actions {
+            flex-direction: row;
+            margin-left: 0;
+            margin-top: 10px;
+        }
+        .itinerary-actions .btn + .btn {
+            margin-top: 0;
+            margin-left: 8px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -240,7 +263,7 @@
         <div class="row">
             <div class="col-12">
                 <div class="card animate fade-in" style="animation-delay: 0.3s;">
-                    <div class="card-body p-4">
+                    <div class="card-body p-4" id="itinerary-container">
                         {% for day, items in itinerary_by_day %}
                             <div class="mb-4 day-container">
                                 <div class="bg-light rounded p-3 mb-3 itinerary-day">
@@ -250,7 +273,7 @@
                                 {% for item in items %}
                                     <div class="itinerary-item animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;" id="item-{{ item.id }}">
                                         <div class="d-flex flex-column flex-md-row justify-content-between">
-                                            <div>
+                                            <div class="itinerary-content">
                                                 <h5>{{ item.activity }}</h5>
                                                 {% if item.location %}
                                                     <div class="mb-2">
@@ -274,7 +297,7 @@
                                                     <p class="text-muted">{{ item.notes }}</p>
                                                 {% endif %}
                                             </div>
-                                            <div class="text-md-end mt-2 mt-md-0">
+                                            <div class="itinerary-actions">
                                                 <button type="button" class="btn btn-sm btn-outline-primary edit-time-btn" 
                                                         data-item-id="{{ item.id }}" data-bs-toggle="tooltip" 
                                                         title="Set/edit time">
@@ -361,7 +384,10 @@
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
-        // Setup modals
+        // 确保地图初始化
+        initializePlanMap();
+        
+        // Setup modals - 将modal实例定义在更高的作用域内
         const timeEditorModal = new bootstrap.Modal(document.getElementById('timeEditorModal'));
         const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
         
@@ -421,19 +447,25 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal
-                    timeEditorModal.hide();
+                    // Close modal - use modal close button directly
+                    document.getElementById('timeEditorModal').querySelector('.btn-close').click();
                     
                     try {
-
                         showToast('Time updated successfully', 'success');
                         
                         // display success message
                         const itemElement = document.getElementById(`item-${itemId}`);
                         if (itemElement) {
+                            // search for the itinerary-content div
+                            const contentDiv = itemElement.querySelector('.itinerary-content');
+                            if (!contentDiv) {
+                                console.error('Cannot find itinerary-content div inside itinerary item:', itemId);
+                                return;
+                            }
+                            
                             // search for the time element
                             let timeElement = null;
-                            const timeElements = itemElement.querySelectorAll('.mb-2');
+                            const timeElements = contentDiv.querySelectorAll('.mb-2');
                             
                             // iterate through time elements to find the one with clock icon
                             for (let i = 0; i < timeElements.length; i++) {
@@ -447,25 +479,37 @@
                             
                             // if time element not found, create a new one
                             if (!timeElement) {
-                                // find the first child div inside the itinerary item
-                                const contentDiv = itemElement.querySelector('div > div:first-child');
-                                if (contentDiv) {
-                                    // create a new time element
-                                    timeElement = document.createElement('div');
-                                    timeElement.className = 'mb-2';
-                                    timeElement.innerHTML = `<i class="far fa-clock text-primary me-1"></i>${formattedTime}`;
-                                    
-                                    // add the new time element to the content div
-                                    contentDiv.appendChild(timeElement);
+                                // create a new time element
+                                timeElement = document.createElement('div');
+                                timeElement.className = 'mb-2';
+                                timeElement.innerHTML = `<i class="far fa-clock text-primary me-1"></i>${formattedTime}`;
+                                
+                                // Find the right position to insert the time element (after location and cost if they exist)
+                                const costElement = contentDiv.querySelector('.fa-money-bill-wave')?.closest('.mb-2');
+                                const locationElement = contentDiv.querySelector('.fa-map-marker-alt')?.closest('.mb-2');
+                                
+                                if (costElement) {
+                                    // Insert after cost element
+                                    costElement.insertAdjacentElement('afterend', timeElement);
+                                } else if (locationElement) {
+                                    // Insert after location element
+                                    locationElement.insertAdjacentElement('afterend', timeElement);
                                 } else {
-                                    console.error('Cannot find content div inside itinerary item:', itemId);
+                                    // Insert after title (h5)
+                                    const titleElement = contentDiv.querySelector('h5');
+                                    if (titleElement) {
+                                        titleElement.insertAdjacentElement('afterend', timeElement);
+                                    } else {
+                                        // Fallback: just append to content div
+                                        contentDiv.appendChild(timeElement);
+                                    }
                                 }
                             } else {
                                 // if time element found, update its content
                                 timeElement.innerHTML = `<i class="far fa-clock text-primary me-1"></i>${formattedTime}`;
                             }
                         } else {
-                            console.error('Cannot find content div inside itinerary item:', itemId);
+                            console.error('Cannot find itinerary item:', itemId);
                         }
                     } catch (error) {
                         console.error('Error updating time:', error);
@@ -507,8 +551,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal
-                    deleteConfirmModal.hide();
+                    // Close modal - 使用modal关闭按钮直接点击
+                    document.getElementById('deleteConfirmModal').querySelector('.btn-close').click();
                     
                     // Remove the item from the UI with animation
                     const itemElement = document.getElementById(`item-${itemId}`);
@@ -788,6 +832,16 @@
                     // dynamically add the new item to the itinerary
                     updateItinerary();
                     
+                    // update map markers if map is initialized
+                    if (data.itinerary_items_json && window.planMap) {
+                        try {
+                            updateMapMarkers(data.itinerary_items_json);
+                            console.log('Map markers updated after adding recommendation');
+                        } catch (mapError) {
+                            console.error('Error updating map markers:', mapError);
+                        }
+                    }
+                    
                     // update the button state
                     if (buttonElement) {
                         buttonElement.disabled = true;
@@ -917,7 +971,7 @@
                         if (data.itinerary_by_day) {
                             console.log('start to update itinerary content');
                             // get the itinerary section
-                            const itinerarySection = document.querySelector('.row .col-12 .card .card-body');
+                            const itinerarySection = document.querySelector('#itinerary-container');
                             
                             if (itinerarySection) {
                                 let itineraryHTML = '';
@@ -951,7 +1005,7 @@
                                         dayHTML += `
                                         <div class="itinerary-item animate fade-in" id="item-${item.id}">
                                             <div class="d-flex flex-column flex-md-row justify-content-between">
-                                                <div>
+                                                <div class="itinerary-content">
                                                     <h5>${item.activity || ''}</h5>
                                                     ${item.location ? `
                                                     <div class="mb-2">
@@ -975,7 +1029,7 @@
                                                     <p class="text-muted">${item.notes}</p>
                                                     ` : ''}
                                                 </div>
-                                                <div class="text-md-end mt-2 mt-md-0">
+                                                <div class="itinerary-actions">
                                                     <button type="button" class="btn btn-sm btn-outline-primary edit-time-btn" 
                                                             data-item-id="${item.id}" data-bs-toggle="tooltip" 
                                                             title="Set/edit time">

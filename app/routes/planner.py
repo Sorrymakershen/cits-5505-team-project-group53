@@ -2,10 +2,16 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models.travel_plan import TravelPlan, ItineraryItem, PlanShare
-from datetime import datetime
+from datetime import datetime, timedelta
 import random  # For generating random recommendations
+import requests  # add requests module for API calls
+import json  # add json module for parsing JSON data
 
 planner_bp = Blueprint('planner', __name__, url_prefix='/planner')
+
+# configuration for Gemini API
+GEMINI_API_KEY = "AIzaSyAwbiZHLVnwXMhVXOS8heweUSXSyU4FTYE"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 @planner_bp.route('/')
 @login_required
@@ -77,11 +83,19 @@ def view_plan(plan_id):
     # Calculate total cost from all itinerary items
     total_cost = 0
     
+    # Group itinerary items by day
+    itinerary_by_day = {}
+    
     # Prepare itinerary items for JSON serialization
     itinerary_items_json = []
     for item in plan.itinerary_items:
         if item.cost:
             total_cost += item.cost
+        
+        # Group by day for template rendering
+        if item.day not in itinerary_by_day:
+            itinerary_by_day[item.day] = []
+        itinerary_by_day[item.day].append(item)
         
         # Create a serializable dictionary for each item
         itinerary_items_json.append({
@@ -95,8 +109,27 @@ def view_plan(plan_id):
             'cost': float(item.cost) if item.cost else 0,
             'notes': item.notes
         })
+    
+    # Convert dictionary to sorted list of tuples for Jinja
+    itinerary_by_day = sorted(itinerary_by_day.items())
+    
+    # Optional: Calculate expense categories
+    categories = {}
+    for item in plan.itinerary_items:
+        if item.cost:
+            activity_type = item.activity.split(' ')[0] if item.activity else 'Other'
+            if activity_type not in categories:
+                categories[activity_type] = 0
+            categories[activity_type] += float(item.cost)
             
-    return render_template('planner/view.html', plan=plan, total_cost=total_cost, itinerary_items_json=itinerary_items_json)
+    return render_template(
+        'planner/view.html', 
+        plan=plan, 
+        total_cost=total_cost, 
+        itinerary_items_json=itinerary_items_json,
+        itinerary_by_day=itinerary_by_day,
+        categories=categories
+    )
 
 @planner_bp.route('/<int:plan_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -152,38 +185,103 @@ def manage_itinerary(plan_id):
             return redirect(url_for('planner.view_plan', plan_id=plan_id))
     
     if request.method == 'POST':
-        # Add new itinerary item
-        day = int(request.form.get('day'))
-        time = request.form.get('time')
-        activity = request.form.get('activity')
-        location = request.form.get('location')
+        # send JSON data for AJAX requests
+        if request.is_xhr or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                # get data from request
+                data = request.json
+                
+                # add day, time, activity, location
+                day = int(data.get('day'))
+                time = data.get('time')
+                activity = data.get('activity')
+                location = data.get('location')
+                
+                # handle empty strings for lat/lng/cost
+                lat_str = data.get('lat')
+                lat = float(lat_str) if lat_str and lat_str.strip() else None
+                
+                lng_str = data.get('lng')
+                lng = float(lng_str) if lng_str and lng_str.strip() else None
+                
+                cost_str = data.get('cost')
+                cost = float(cost_str) if cost_str and cost_str.strip() else 0
+                
+                notes = data.get('notes')
+                
+                item = ItineraryItem(
+                    day=day,
+                    time=time,
+                    activity=activity,
+                    location=location,
+                    lat=lat,
+                    lng=lng,
+                    cost=cost,
+                    notes=notes,
+                    travel_plan_id=plan_id
+                )
+                
+                db.session.add(item)
+                db.session.commit()
+                
+                # return a JSON response with the new item
+                return jsonify({
+                    'success': True,
+                    'message': 'Itinerary item added successfully!',
+                    'item': {
+                        'id': item.id,
+                        'day': item.day,
+                        'time': item.time,
+                        'activity': item.activity,
+                        'location': item.location,
+                        'lat': item.lat,
+                        'lng': item.lng,
+                        'cost': float(item.cost) if item.cost else 0,
+                        'notes': item.notes
+                    }
+                })
+                
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({
+                    'success': False,
+                    'message': f'Error adding itinerary item: {str(e)}'
+                }), 400
         
-        # Convert empty strings to None for float fields
-        lat = request.form.get('lat')
-        lat = float(lat) if lat.strip() else None
-        
-        lng = request.form.get('lng') 
-        lng = float(lng) if lng.strip() else None
-        
-        cost = float(request.form.get('cost') or 0)
-        notes = request.form.get('notes')
-        
-        item = ItineraryItem(
-            day=day,
-            time=time,
-            activity=activity,
-            location=location,
-            lat=lat,
-            lng=lng,
-            cost=cost,
-            notes=notes,
-            travel_plan_id=plan_id
-        )
-        
-        db.session.add(item)
-        db.session.commit()
-        
-        flash('Itinerary item added successfully!', 'success')
+        # handle form submission
+        else:
+            # Add new itinerary item
+            day = int(request.form.get('day'))
+            time = request.form.get('time')
+            activity = request.form.get('activity')
+            location = request.form.get('location')
+            
+            # Convert empty strings to None for float fields
+            lat = request.form.get('lat')
+            lat = float(lat) if lat.strip() else None
+            
+            lng = request.form.get('lng') 
+            lng = float(lng) if lng.strip() else None
+            
+            cost = float(request.form.get('cost') or 0)
+            notes = request.form.get('notes')
+            
+            item = ItineraryItem(
+                day=day,
+                time=time,
+                activity=activity,
+                location=location,
+                lat=lat,
+                lng=lng,
+                cost=cost,
+                notes=notes,
+                travel_plan_id=plan_id
+            )
+            
+            db.session.add(item)
+            db.session.commit()
+            
+            flash('Itinerary item added successfully!', 'success')
         
     # Get all itinerary items for this plan
     items = ItineraryItem.query.filter_by(travel_plan_id=plan_id).order_by(ItineraryItem.day, ItineraryItem.time).all()
@@ -303,6 +401,401 @@ def remove_share(plan_id, share_id):
 def recommend_destinations():
     """Smart destination recommendation page"""
     return render_template('planner/recommend.html')
+
+@planner_bp.route('/<int:plan_id>/ai_recommendations', methods=['POST'])
+@login_required
+def ai_recommendations(plan_id):
+    """Get AI recommended activities based on travel plan"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user has permission to access this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email
+        ).first()
+        
+        if not shared and not plan.is_public:
+            return jsonify({'success': False, 'message': 'You do not have permission to access this plan'}), 403
+    
+    # Get day data from request
+    data = request.json
+    day = data.get('day', 1)
+    
+    # Prepare prompt in English
+    prompt_text = f"""
+    Recommend 5 different activities for Day {day} of the following travel plan:
+    
+    Destination: {plan.destination}
+    Trip dates: {plan.start_date.strftime('%Y-%m-%d')} to {plan.end_date.strftime('%Y-%m-%d')}
+    Interests: {plan.interests or 'Not specified'}
+    
+    Please return 5 recommended activities in JSON format as follows:
+    [
+        {{
+            "activity": "Activity name",
+            "location": "Location",
+            "cost": Estimated cost (number only),
+            "description": "Brief description",
+            "time_spent": "Estimated time (e.g.: 2 hours)"
+        }},
+        ...
+    ]
+    """
+    
+    # Prepare Gemini API request data
+    request_data = {
+        "contents": [{
+            "parts": [{"text": prompt_text}]
+        }]
+    }
+    
+    try:
+        # Call Gemini API directly
+        api_url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
+        response = requests.post(
+            api_url,
+            headers={"Content-Type": "application/json"},
+            json=request_data
+        )
+        
+        # Check response status
+        response.raise_for_status()
+        response_data = response.json()
+        
+        # Extract text from response
+        if 'candidates' in response_data and len(response_data['candidates']) > 0:
+            response_text = response_data['candidates'][0]['content']['parts'][0]['text']
+            
+            # Extract JSON part from response
+            json_start = response_text.find('[')
+            json_end = response_text.rfind(']') + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                recommendations = json.loads(json_str)
+                return jsonify({
+                    'success': True, 
+                    'recommendations': recommendations,
+                    'day': day
+                })
+            else:
+                # Failed to format response, return raw response
+                return jsonify({
+                    'success': False, 
+                    'message': 'Failed to parse API response',
+                    'raw_response': response_text
+                }), 500
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Invalid API response format',
+                'raw_response': response_data
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            'success': False, 
+            'message': f'API request error: {str(e)}'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': f'Error getting recommendations: {str(e)}'
+        }), 500
+
+@planner_bp.route('/<int:plan_id>/add_recommendation', methods=['POST'])
+@login_required
+def add_recommendation(plan_id):
+    """Add AI recommended activity to the itinerary"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user has permission to edit this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email,
+            can_edit=True
+        ).first()
+        
+        if not shared:
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this plan'}), 403
+    
+    try:
+        # Get activity data from request
+        data = request.json
+        print(f"DEBUG - Received recommendation data: {data}")
+        
+        day = int(data.get('day')) if data.get('day') else 1
+        activity = data.get('activity')
+        location = data.get('location')
+        
+        # handle empty strings for cost
+        cost_raw = data.get('cost', 0)
+        cost = float(cost_raw) if cost_raw and str(cost_raw).strip() else 0
+        notes = data.get('description')
+        
+        # add lat/lng handling
+        lat = None
+        lng = None
+        
+        # try to extract lat/lng from the data
+        if 'lat' in data and data['lat'] and 'lng' in data and data['lng']:
+            try:
+                lat = float(data['lat'])
+                lng = float(data['lng'])
+            except (ValueError, TypeError):
+                # if conversion fails, set lat/lng to None
+                lat = None
+                lng = None
+        
+        # create a new itinerary item
+        item = ItineraryItem(
+            day=day,
+            activity=activity,
+            location=location,
+            cost=cost,
+            notes=notes,
+            lat=lat,
+            lng=lng,
+            travel_plan_id=plan_id
+        )
+        
+        db.session.add(item)
+        db.session.commit()
+        
+        print(f"DEBUG - Added item successfully: id={item.id}")
+        
+        # return a JSON response with the new item
+        return jsonify({
+            'success': True,
+            'message': 'Activity has been added to your itinerary',
+            'item': {
+                'id': item.id,
+                'day': item.day,
+                'time': item.time,
+                'activity': item.activity,
+                'location': item.location,
+                'lat': item.lat,
+                'lng': item.lng,
+                'cost': float(item.cost) if item.cost else 0,
+                'notes': item.notes
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR - Failed to add recommendation: {str(e)}")
+        print(f"ERROR - Traceback: {error_details}")
+        return jsonify({
+            'success': False, 
+            'message': f'Error adding activity: {str(e)}'
+        }), 500
+
+@planner_bp.route('/<int:plan_id>/get_itinerary_data')
+@login_required
+def get_itinerary_data(plan_id):
+    """Get updated itinerary data for AJAX updates"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user has permission to access this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email
+        ).first()
+        
+        if not shared and not plan.is_public:
+            return jsonify({'success': False, 'message': 'You do not have permission to access this plan'}), 403
+    
+    # Calculate total cost from all itinerary items
+    total_cost = 0
+    
+    # Generate day_dates array needed by the frontend
+    day_dates = []
+    for i in range((plan.end_date - plan.start_date).days + 1):
+        current_date = (plan.start_date + timedelta(days=i)).strftime('%b %d, %Y')
+        day_dates.append(current_date)
+    
+    # Group itinerary items by day
+    itinerary_by_day = {}
+    
+    # Prepare itinerary items for JSON serialization
+    itinerary_items_json = []
+    for item in plan.itinerary_items:
+        if item.cost:
+            total_cost += item.cost
+        
+        # Group by day for template rendering
+        if item.day not in itinerary_by_day:
+            itinerary_by_day[item.day] = []
+        itinerary_by_day[item.day].append({
+            'id': item.id,
+            'day': item.day,
+            'time': item.time,
+            'activity': item.activity,
+            'location': item.location,
+            'cost': float(item.cost) if item.cost else 0,
+            'notes': item.notes
+        })
+        
+        # Create a serializable dictionary for each item
+        itinerary_items_json.append({
+            'id': item.id,
+            'day': item.day,
+            'time': item.time,
+            'activity': item.activity,
+            'location': item.location,
+            'lat': item.lat,
+            'lng': item.lng,
+            'cost': float(item.cost) if item.cost else 0,
+            'notes': item.notes
+        })
+    
+    # Calculate expense categories
+    categories = {}
+    for item in plan.itinerary_items:
+        if item.cost:
+            activity_type = item.activity.split(' ')[0] if item.activity else 'Other'
+            if activity_type not in categories:
+                categories[activity_type] = 0
+            categories[activity_type] += float(item.cost)
+    
+    # Convert dictionary to list of tuples for frontend compatibility
+    itinerary_by_day_list = []
+    for day, items in sorted(itinerary_by_day.items()):
+        itinerary_by_day_list.append((day, items))
+    
+    return jsonify({
+        'success': True,
+        'total_cost': total_cost,
+        'budget': plan.budget,
+        'itinerary_items_json': itinerary_items_json,
+        'itinerary_by_day': itinerary_by_day_list,
+        'categories': categories,
+        'day_dates': day_dates
+    })
+
+@planner_bp.route('/<int:plan_id>/delete_itinerary_item', methods=['POST'])
+@login_required
+def delete_itinerary_item(plan_id):
+    """Delete an itinerary item"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user has permission to edit this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email,
+            can_edit=True
+        ).first()
+        
+        if not shared:
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this plan'}), 403
+    
+    # Get data from request
+    data = request.json
+    item_id = data.get('item_id')
+    
+    if not item_id:
+        return jsonify({'success': False, 'message': 'No item ID provided'}), 400
+    
+    # Get the item and verify it belongs to the plan
+    item = ItineraryItem.query.get_or_404(item_id)
+    
+    if item.travel_plan_id != plan_id:
+        return jsonify({'success': False, 'message': 'Item does not belong to this plan'}), 403
+    
+    # Delete the item
+    db.session.delete(item)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Activity removed successfully'
+    })
+
+@planner_bp.route('/<int:plan_id>/update_item_time', methods=['POST'])
+@login_required
+def update_item_time(plan_id):
+    """Update the time for an itinerary item"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # Check if user has permission to edit this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id,
+            shared_email=current_user.email,
+            can_edit=True
+        ).first()
+        
+        if not shared:
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this plan'}), 403
+    
+    # Get data from request
+    data = request.json
+    item_id = data.get('item_id')
+    time = data.get('time')
+    
+    # 添加调试日志
+    print(f"DEBUG - Updating time: item_id={item_id}, time={time}, type(time)={type(time)}")
+    
+    if not item_id:
+        return jsonify({'success': False, 'message': 'No item ID provided'}), 400
+    
+    # Get the item and verify it belongs to the plan
+    item = ItineraryItem.query.get_or_404(item_id)
+    
+    if item.travel_plan_id != plan_id:
+        return jsonify({'success': False, 'message': 'Item does not belong to this plan'}), 403
+    
+    # 添加调试日志 - 显示当前时间值
+    print(f"DEBUG - Before update: item.time={item.time}, type={type(item.time)}")
+    
+    # Update the time
+    item.time = time
+    try:
+        db.session.commit()
+        print(f"DEBUG - After successful update: item.time={item.time}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG - Database error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error saving to database: {str(e)}'}), 500
+    
+    # Optional: Format the time for display (e.g. 14:30 -> 2:30 PM)
+    formatted_time = None
+    if time and isinstance(time, str) and ':' in time:
+        try:
+            # Parse time string into hours and minutes
+            hours, minutes = map(int, time.split(':'))
+            period = "AM"
+            
+            # Validate hours and minutes
+            if 0 <= hours <= 23 and 0 <= minutes <= 59:
+                # Convert to 12-hour format
+                if hours >= 12:
+                    period = "PM"
+                    if hours > 12:
+                        hours -= 12
+                elif hours == 0:
+                    hours = 12
+                    
+                formatted_time = f"{hours}:{minutes:02d} {period}"
+            else:
+                formatted_time = time
+        except Exception:
+            # If any error occurs during formatting, just use the original time
+            formatted_time = time
+    else:
+        formatted_time = time
+    
+    return jsonify({
+        'success': True,
+        'message': 'Time updated successfully',
+        'formatted_time': formatted_time
+    })
 
 @planner_bp.route('/get_recommendations', methods=['POST'])
 @login_required
@@ -527,4 +1020,48 @@ def get_recommendations():
             'name': user_destination,
             'coords': user_destination_coords
         } if has_specific_input else None
+    })
+
+@planner_bp.route('/<int:plan_id>/itinerary/data', methods=['GET'])
+@login_required
+def get_itinerary_items_data(plan_id):
+    """Get all itinerary items for a plan as JSON - for AJAX updates"""
+    plan = TravelPlan.query.get_or_404(plan_id)
+    
+    # check if user has permission to access this plan
+    if plan.user_id != current_user.id:
+        shared = PlanShare.query.filter_by(
+            travel_plan_id=plan_id, 
+            shared_email=current_user.email
+        ).first()
+        
+        if not shared:
+            return jsonify({
+                'success': False,
+                'message': 'You do not have permission to view this itinerary'
+            }), 403
+    
+    # get all itinerary items for the plan
+    items = ItineraryItem.query.filter_by(travel_plan_id=plan_id).order_by(
+        ItineraryItem.day, ItineraryItem.time
+    ).all()
+    
+    # create a list of dictionaries to hold the item data
+    result = []
+    for item in items:
+        result.append({
+            'id': item.id,
+            'day': item.day,
+            'time': item.time,
+            'activity': item.activity,
+            'location': item.location,
+            'lat': item.lat,
+            'lng': item.lng,
+            'cost': float(item.cost) if item.cost else 0,
+            'notes': item.notes
+        })
+    
+    return jsonify({
+        'success': True,
+        'items': result
     })

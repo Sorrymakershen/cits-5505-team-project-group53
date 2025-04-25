@@ -2,28 +2,32 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 import os 
 
-# 先创建 Flask 应用实例
+# create the Flask application
 app = Flask(__name__)
-# 配置应用
+# configure the application
 app.config['SECRET_KEY'] = 'your-secret-key'  # Change this in production
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  
+app.config['WTF_CSRF_TIME_LIMIT'] = None      
 
-# 然后初始化扩展
+# initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# initialize the database and migration
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
-# 导入模型，确保迁移能够检测到它们
+# import models
 from app.models import user, travel_plan, memory
 
 def create_app():
-    # 注册蓝图和其他设置
-    # 因为主应用实例已经创建，这个函数主要用来添加配置
     
     # Import user loader function
     from app import auth

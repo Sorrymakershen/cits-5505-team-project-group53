@@ -1,5 +1,9 @@
 // Main JavaScript file for Travel Planning Platform
 
+// variables to track map initialization
+let planMapInitialized = false;
+let memoriesMapInitialized = false;
+
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize tooltips
@@ -27,13 +31,28 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize timeline animations
   initializeTimelineAnimations();
   
-  // Initialize maps if they exist on the page
-  if (document.getElementById('planMap')) {
+  // Initialize maps if they exist on the page and haven't been initialized yet
+  if (document.getElementById('planMap') && !planMapInitialized) {
     initializePlanMap();
   }
   
-  if (document.getElementById('memoriesMap')) {
+  if (document.getElementById('memoriesMap') && !memoriesMapInitialized) {
     initializeMemoriesMap();
+  }
+
+  // auto-update itinerary data
+  if (window.location.href.includes('/planner/') && document.querySelector('.itinerary-item')) {
+    // check if updateItinerary function is defined
+    if (typeof updateItinerary === 'function') {
+      updateItinerary();
+    }
+    
+    // update itinerary every 30 seconds
+    setInterval(function() {
+      if (typeof updateItinerary === 'function') {
+        updateItinerary();
+      }
+    }, 30000); // update every 30 seconds
   }
   
   // Form validation
@@ -88,6 +107,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// refresh itinerary when the tab is active
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && 
+      window.location.href.includes('/planner/') && 
+      document.querySelector('.itinerary-item') && 
+      typeof updateItinerary === 'function') {
+    updateItinerary();
+  }
+});
+
 // Timeline animations with intersection observer
 function initializeTimelineAnimations() {
   const timelineItems = document.querySelectorAll('.timeline-item');
@@ -110,7 +139,19 @@ function initializeTimelineAnimations() {
 
 // Initialize map for travel plan view
 function initializePlanMap() {
+  // if map already initialized, return
+  if (planMapInitialized) {
+    return;
+  }
+  
   const mapElement = document.getElementById('planMap');
+  if (!mapElement) {
+    return;
+  }
+  
+  // mark map as initialized
+  planMapInitialized = true;
+  
   const planItems = JSON.parse(mapElement.dataset.items || '[]');
   
   // Create map centered on first location or default to a world view
@@ -181,7 +222,19 @@ function initializePlanMap() {
 
 // Initialize map for memories view
 function initializeMemoriesMap() {
+  // if map already initialized, return
+  if (memoriesMapInitialized) {
+    return;
+  }
+  
   const mapElement = document.getElementById('memoriesMap');
+  if (!mapElement) {
+    return;
+  }
+  
+  // mark map as initialized
+  memoriesMapInitialized = true;
+  
   const memories = JSON.parse(mapElement.dataset.memories || '[]');
   
   // Create map centered on first memory or default to a world view

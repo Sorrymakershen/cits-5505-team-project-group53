@@ -1065,3 +1065,96 @@ def get_itinerary_items_data(plan_id):
         'success': True,
         'items': result
     })
+
+@planner_bp.route('/api/location_recommendations', methods=['POST'])
+@login_required
+def location_recommendations():
+    """Get AI recommendations for a location"""
+    try:
+        # Get location data from request
+        data = request.json
+        location = data.get('location')
+        
+        if not location:
+            return jsonify({'success': False, 'message': 'Location is required'}), 400
+            
+        # Prepare prompt in English for more consistent and higher quality responses
+        prompt_text = f"""
+        Provide interesting information about {location} that would be useful for a traveler.
+        Include:
+        1. A brief overview
+        2. 3-5 interesting facts
+        3. Top 5 must-visit attractions
+        4. Best time to visit
+        5. Local cuisine specialties
+
+        Format your response using markdown for better readability.
+        """
+        
+        # Prepare Gemini API request data
+        request_data = {
+            "contents": [{
+                "parts": [{"text": prompt_text}]
+            }]
+        }
+        
+        # Call Gemini API directly
+        api_url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
+        response = requests.post(
+            api_url,
+            headers={"Content-Type": "application/json"},
+            json=request_data
+        )
+        
+        # Check response status
+        response.raise_for_status()
+        response_data = response.json()
+        
+        # Extract text from response
+        if 'candidates' in response_data and len(response_data['candidates']) > 0:
+            response_text = response_data['candidates'][0]['content']['parts'][0]['text']
+            
+            # Remove common AI style introductions
+            cleaned_text = response_text
+            
+            # Remove common patterns like "Okay, here's a brief overview of Shanghai..."
+            import re
+            ai_intro_patterns = [
+                r'^Okay,\s+.*?(?=\n)',
+                r'^Sure,\s+.*?(?=\n)',
+                r'^Here\s+(?:is|are).*?(?=\n)',
+                r'^I\'d\s+be\s+happy\s+to.*?(?=\n)',
+                r'^Here\'s\s+(?:some|the).*?(?=\n)',
+                r'^Let\s+me\s+provide\s+you.*?(?=\n)',
+                r'^I\'ll\s+provide\s+you.*?(?=\n)',
+                r'^Certainly[\s,!]+.*?(?=\n)'
+            ]
+            
+            for pattern in ai_intro_patterns:
+                cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE)
+            
+            # Remove leading whitespace after removing the intro
+            cleaned_text = cleaned_text.lstrip()
+            
+            return jsonify({
+                'success': True, 
+                'recommendation': cleaned_text,
+                'location': location
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Invalid API response format',
+                'raw_response': response_data
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            'success': False, 
+            'message': f'API request error: {str(e)}'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': f'Error getting recommendations: {str(e)}'
+        }), 500

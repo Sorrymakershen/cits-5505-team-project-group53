@@ -2,6 +2,25 @@
 
 {% block title %}Address Map Viewer{% endblock %}
 
+{% block extra_css %}
+<style>
+    .ai-suggestion {
+        line-height: 1.6;
+    }
+    .ai-suggestion h1, .ai-suggestion h2, .ai-suggestion h3 {
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .ai-suggestion ul, .ai-suggestion ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .ai-suggestion p {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row mb-4">
@@ -41,7 +60,7 @@
             <div class="card animate fade-in mb-4 d-none" id="aiRecommendationsCard">
                 <div class="card-body p-4">
                     <h3 class="card-title mb-4">AI Suggestions</h3>
-                    <div id="aiRecommendationsContent">
+                    <div id="aiRecommendationsContent" class="ai-suggestion">
                         <!-- AI recommendations will be displayed here -->
                     </div>
                     <div id="aiLoadingIndicator" class="text-center mt-3 d-none">
@@ -76,6 +95,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Add Marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize map
@@ -172,40 +193,20 @@
             aiRecommendationsCard.classList.remove('d-none');
             aiLoadingIndicator.classList.remove('d-none');
             
-            // Prepare the query for the AI model
-            const prompt = `I'm planning to visit ${location}. Please provide a brief overview of this location, some interesting facts, and 2-3 must-visit attractions or activities.`;
-            
-            // API endpoint and parameters for the THUDM/GLM-Z1-9B-0414 model
-            const apiUrl = 'https://api.siliconflow.cn/v1/chat/completions';
-            const apiKey = 'sk-rlztracscvkmezznfwsksbafrjbrddugfgjbfxlzszlnntin'; // API key from your request
-            
-            // Prepare the request body
-            const requestBody = {
-                model: "THUDM/GLM-Z1-9B-0414",
-                messages: [
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                stream: false,
-                max_tokens: 512,
-                temperature: 0.7,
-                top_p: 0.7
-            };
-            
-            // Make the API call
-            fetch(apiUrl, {
+            // Use our secure backend API endpoint instead of directly calling Gemini API
+            fetch('/planner/api/location_recommendations', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify({ location: location })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
+                    return response.json().then(errorData => {
+                        console.error('API response not OK:', response.status, errorData);
+                        throw new Error(`API request failed: ${errorData.message || 'Unknown error'}`);
+                    });
                 }
                 return response.json();
             })
@@ -213,25 +214,28 @@
                 // Hide loading indicator
                 aiLoadingIndicator.classList.add('d-none');
                 
-                // Extract and display the AI-generated content
-                const aiResponse = data.choices[0].message.content;
-                
-                // Format the response with some HTML styling
-                aiRecommendationsContent.innerHTML = `
-                    <div class="ai-suggestion">
-                        ${aiResponse.replace(/\n/g, '<br>')}
-                    </div>
-                `;
+                // Display the AI-generated content from backend
+                if (data && data.success && data.recommendation) {
+                    // Parse markdown to HTML using marked.js
+                    const parsedContent = marked.parse(data.recommendation);
+                    
+                    // Display the formatted content
+                    aiRecommendationsContent.innerHTML = parsedContent;
+                } else {
+                    console.error('Unexpected API response structure:', data);
+                    throw new Error(data.message || 'Invalid API response structure');
+                }
             })
             .catch(error => {
                 console.error('AI recommendation error:', error);
                 aiLoadingIndicator.classList.add('d-none');
                 
-                // Show error message
+                // Show detailed error message
                 aiRecommendationsContent.innerHTML = `
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
-                        Unable to get AI suggestions at this time. Please try again later.
+                        Unable to get AI suggestions at this time. Please try again later.<br>
+                        <small class="text-muted">(Error: ${error.message})</small>
                     </div>
                 `;
             });

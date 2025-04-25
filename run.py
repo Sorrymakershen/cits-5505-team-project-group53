@@ -1,7 +1,8 @@
 from app import app, create_app
 
-# 确保应用程序是完全配置的
+# ensure the app is created
 application = create_app()
 
 if __name__ == '__main__':
-    application.run(debug=True)
+    # set host and port for the application
+    application.run(debug=True, host='127.0.0.1', port=5000)

@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 2f0f87f6c365
+Revision ID: 554d80bbf11d
 Revises: 
-Create Date: 2025-04-21 14:04:19.971721
+Create Date: 2025-04-26 18:15:32.680350
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '2f0f87f6c365'
+revision = '554d80bbf11d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -24,6 +24,9 @@ def upgrade():
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('password_hash', sa.String(length=128), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('home_address', sa.String(length=200), nullable=True),
+    sa.Column('home_lat', sa.Float(), nullable=True),
+    sa.Column('home_lng', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
@@ -47,6 +50,8 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=100), nullable=False),
     sa.Column('destination', sa.String(length=100), nullable=False),
+    sa.Column('dest_lat', sa.Float(), nullable=True),
+    sa.Column('dest_lng', sa.Float(), nullable=True),
     sa.Column('start_date', sa.DateTime(), nullable=False),
     sa.Column('end_date', sa.DateTime(), nullable=False),
     sa.Column('budget', sa.Float(), nullable=True),

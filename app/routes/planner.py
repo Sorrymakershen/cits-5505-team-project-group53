@@ -43,10 +43,20 @@ def create_plan():
         interests = request.form.get('interests')
         is_public = 'is_public' in request.form
         
+        # 获取位置坐标
+        lat = request.form.get('lat')
+        lng = request.form.get('lng')
+        
+        # 转换坐标为浮点数（如果有提供）
+        dest_lat = float(lat) if lat and lat.strip() else None
+        dest_lng = float(lng) if lng and lng.strip() else None
+        
         # Create new travel plan
         plan = TravelPlan(
             title=title,
             destination=destination,
+            dest_lat=dest_lat,
+            dest_lng=dest_lng,
             start_date=start_date,
             end_date=end_date,
             budget=budget,
@@ -158,6 +168,16 @@ def edit_plan(plan_id):
         plan.budget = float(request.form.get('budget') or 0)
         plan.interests = request.form.get('interests')
         plan.is_public = 'is_public' in request.form
+        
+        # 获取位置坐标
+        lat = request.form.get('lat')
+        lng = request.form.get('lng')
+        
+        # 转换坐标为浮点数（如果有提供）
+        if lat and lat.strip():
+            plan.dest_lat = float(lat)
+        if lng and lng.strip():
+            plan.dest_lng = float(lng)
         
         db.session.commit()
         

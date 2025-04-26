@@ -41,11 +41,13 @@ def create_app():
     from app.routes.planner import planner_bp
     from app.routes.memories import memories_bp
     from app.routes.main import main_bp
+    from app.routes.statistics import statistics_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(planner_bp)
     app.register_blueprint(memories_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(statistics_bp)
     
     # Create database tables
     with app.app_context():

@@ -5,6 +5,8 @@ class TravelPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     destination = db.Column(db.String(100), nullable=False)
+    dest_lat = db.Column(db.Float)  # 目的地纬度
+    dest_lng = db.Column(db.Float)  # 目的地经度
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
     budget = db.Column(db.Float)

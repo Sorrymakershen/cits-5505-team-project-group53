@@ -2,6 +2,41 @@
 
 {% block title %}Create New Trip - Travel Planning Platform{% endblock %}
 
+{% block extra_css %}
+<style>
+    .address-input-container {
+        position: relative;
+    }
+    
+    #suggestions-container {
+        position: absolute;
+        width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .address-suggestion {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .address-suggestion:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .address-suggestion:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -17,10 +52,23 @@
                             <div class="invalid-feedback">Please give your trip a name.</div>
                         </div>
                         
-                        <div class="mb-3">
+                        <div class="mb-3 address-input-container">
                             <label for="destination" class="form-label">Destination</label>
-                            <input type="text" class="form-control" id="destination" name="destination" required>
-                            <div class="invalid-feedback">Please enter a destination.</div>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="destination" name="destination" required>
+                                <button class="btn btn-outline-primary" type="button" id="validateAddressBtn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">Please enter a valid destination.</div>
+                            <div class="form-text">Start typing and select from suggestions to ensure an accurate location.</div>
+                            
+                            <!-- Address suggestions will appear here -->
+                            <div id="suggestions-container" class="d-none"></div>
+                            
+                            <!-- Hidden fields for coordinates -->
+                            <input type="hidden" id="lat" name="lat">
+                            <input type="hidden" id="lng" name="lng">
                         </div>
                         
                         <div class="row mb-3">
@@ -61,7 +109,7 @@
                         
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('planner.index') }}" class="btn btn-light">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Create Trip</button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">Create Trip</button>
                         </div>
                     </form>
                 </div>
@@ -69,6 +117,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -88,8 +137,93 @@ document.addEventListener('DOMContentLoaded', function() {
             endDate.value = this.value;
         }
     });
+    
+    // Initialize destination address validation
+    initDestinationValidation();
 });
-</script>
-{% endblock %}
 
+function initDestinationValidation() {
+    const destinationInput = document.getElementById('destination');
+    const validateBtn = document.getElementById('validateAddressBtn');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const submitBtn = document.getElementById('submitBtn');
+    let debounceTimer;
+    
+    // Handle address input (debounced)
+    destinationInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const query = this.value.trim();
+            
+            if (query.length >= 3) {
+                fetchAddressSuggestions(query);
+            } else {
+                suggestionsContainer.innerHTML = '';
+                suggestionsContainer.classList.add('d-none');
+            }
+        }, 500);
+    });
+    
+    // Handle validate button click
+    validateBtn.addEventListener('click', function() {
+        const query = destinationInput.value.trim();
+        
+        if (query.length > 0) {
+            fetchAddressSuggestions(query);
+        }
+    });
+    
+    // Fetch address suggestions
+    function fetchAddressSuggestions(query) {
+        // Show loading state
+        suggestionsContainer.innerHTML = '<div class="address-suggestion text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Searching...</div>';
+        suggestionsContainer.classList.remove('d-none');
+        
+        // Call Nominatim API
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    renderSuggestions(data);
+                } else {
+                    suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching address suggestions:', error);
+                suggestionsContainer.innerHTML = '<div class="address-suggestion text-center text-danger">Error searching for address</div>';
+            });
+    }
+    
+    // Render suggestions
+    function renderSuggestions(suggestions) {
+        suggestionsContainer.innerHTML = '';
+        
+        suggestions.forEach(suggestion => {
+            const div = document.createElement('div');
+            div.className = 'address-suggestion';
+            div.textContent = suggestion.display_name;
+            
+            // Store the coordinates as data attributes
+            div.dataset.lat = suggestion.lat;
+            div.dataset.lng = suggestion.lon;
+            div.dataset.name = suggestion.display_name;
+            
+            div.addEventListener('click', function() {
+                // Set the input value
+                destinationInput.value = this.dataset.name;
+                
+                // Set the hidden inputs
+                document.getElementById('lat').value = this.dataset.lat;
+                document.getElementById('lng').value = this.dataset.lng;
+                
+                // Hide suggestions
+                suggestionsContainer.classList.add('d-none');
+            });
+            
+            suggestionsContainer.appendChild(div);
+        });
+    }
+}
+</script>
 {% endblock %}

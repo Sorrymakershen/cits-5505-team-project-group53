@@ -10,6 +10,11 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Home location fields for statistics
+    home_address = db.Column(db.String(200))
+    home_lat = db.Column(db.Float)
+    home_lng = db.Column(db.Float)
+    
     # Relationships
     travel_plans = db.relationship('TravelPlan', backref='user', lazy='dynamic')
     memories = db.relationship('Memory', backref='user', lazy='dynamic')

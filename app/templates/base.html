@@ -38,14 +38,18 @@
                         <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                     </li>
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-                        </li>
+                        
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('planner.index') }}">Travel Plans</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('statistics.index') }}">Statistics</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('memories.index') }}">Memories</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">

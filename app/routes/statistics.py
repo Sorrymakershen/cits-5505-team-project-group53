@@ -214,9 +214,7 @@ def calculate_travel_statistics(user):
             if len(parts) > 1:
                 country = parts[-1].strip()
                 if country not in stats['visited_countries']:
-                    stats['visited_countries'].append(country)
-        
-        # Calculate distance if home location is set
+                    stats['visited_countries'].append(country)        # Calculate distance if home location is set
         if user.home_lat and user.home_lng and len(plan.itinerary_items.all()) > 0:
             # Use the first itinerary item's location as the destination coordinates
             first_item = plan.itinerary_items.first()

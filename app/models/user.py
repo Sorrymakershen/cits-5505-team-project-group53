@@ -9,8 +9,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Home location fields for statistics
+      # Home location fields for statistics
     home_address = db.Column(db.String(200))
     home_lat = db.Column(db.Float)
     home_lng = db.Column(db.Float)

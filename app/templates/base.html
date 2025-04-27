@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>    <meta charset="UTF-8">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Travel Platform{% endblock %}</title>
+    <title>{% block title %}Travel Planning Platform{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,15 +19,83 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
-    {% block extra_css %}{% endblock %}
+
+    <style>
+        /* New Navbar Design */
+        .navbar {
+            background: linear-gradient(to right, #00b4d8, #0077b6); /* Gradient background */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow */
+            padding: 15px 0;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: white;
+            font-size: 1.75rem;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            color: #e5e4e0; /* Hover color */
+        }
+
+        .nav-link {
+            color: white !important;
+            padding: 8px 15px;
+            font-size: 1rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Slight background change on hover */
+            color: #e5e4e0; /* Hover text color */
+        }
+
+        .navbar-toggler {
+            border: none;
+        }
+
+        .navbar-toggler-icon {
+            background-color: white;
+        }
+
+        .navbar-nav {
+            margin-left: auto;
+        }
+
+        .dropdown-menu {
+            background-color: #0077b6;
+            border-radius: 8px;
+        }
+
+        .dropdown-item {
+            color: white;
+            padding: 10px 20px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #00b4d8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 10px 0;
+            }
+
+            .navbar-nav {
+                text-align: center;
+            }
+        }
+    </style>
+
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
-                <i class="fas fa-globe-americas me-2 text-primary"></i>Travel Platform
+                <i class="fas fa-globe-americas me-2 text-white"></i>Travel Platform
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -37,7 +106,6 @@
                         <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                     </li>
                     {% if current_user.is_authenticated %}
-                        
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('planner.index') }}">Travel Plans</a>
                         </li>
@@ -92,11 +160,12 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->    <footer class="text-center text-lg-start">
+    <!-- Footer -->
+    <footer class="text-center text-lg-start">
         <div class="container py-4">
             <div class="row">
                 <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h5 class="mb-3">Travel Platform</h5>
+                    <h5 class="mb-3">Travel Planning Platform</h5>
                     <p>Plan your next adventure and preserve your travel memories all in one place.</p>
                 </div>
                 <div class="col-lg-4 mb-4 mb-lg-0">
@@ -114,10 +183,10 @@
                         <a href="https://www.instagram.com/" target="_blank" class="me-3 text-decoration-none"><i class="fab fa-instagram"></i></a>
                         <a href="https://www.pinterest.com/" target="_blank" class="text-decoration-none"><i class="fab fa-pinterest"></i></a>
                     </div>
-                </div></div>
+
         </div>
         <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-            © 2025 Travel Platform. All rights reserved.
+            © 2025 Travel Planning Platform. All rights reserved.
         </div>
     </footer>
 
@@ -129,7 +198,6 @@
     
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
-    {% block extra_js %}{% endblock %}
+
 </body>
 </html>

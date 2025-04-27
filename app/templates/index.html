@@ -1,41 +1,41 @@
 {% extends 'base.html' %}
 
-{% block title %}Travel Planning Platform - Your All-in-One Travel Companion{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
+<!-- Hero Section with Enhanced Animations -->
 <section class="hero">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 animate fade-in">
-                <h1>Your Journey, Your Story</h1>
-                <p class="lead mb-4">Plan your next adventure and preserve your travel memories all in one place.</p>                <div class="d-flex gap-3">
+                <h1 class="animate slide-in" style="animation-delay: 0.2s;">Your Journey, Your Story</h1>
+                <p class="lead mb-4 animate slide-in" style="animation-delay: 0.4s;">Plan your next adventure and preserve your travel memories all in one place.</p>
+                <div class="d-flex gap-3 animate slide-in" style="animation-delay: 0.6s;">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('planner.create_plan') }}" class="btn btn-light btn-lg">Plan a Trip</a>
-                        <a href="{{ url_for('planner.recommend_destinations') }}" class="btn btn-primary btn-lg">Smart Recommendations</a>
+                        <a href="{{ url_for('planner.recommend_destinations') }}" class="btn btn-primary btn-lg pulse">Smart Recommendations</a>
                         <a href="{{ url_for('memories.create_memory') }}" class="btn btn-outline-light btn-lg">Add a Memory</a>
                     {% else %}
-                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">Get Started</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg pulse">Get Started</a>
                         <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Sign In</a>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-lg-6 mt-5 mt-lg-0 animate fade-in" style="animation-delay: 0.3s;">
-                <img src="{{ url_for('static', filename='img/hero-image.png') }}" alt="Travel Planning" class="img-fluid rounded">
+            <div class="col-lg-6 mt-5 mt-lg-0 animate zoom-in" style="animation-delay: 0.5s;">
+                <!-- Hero image or decorative element could be added here -->
             </div>
         </div>
     </div>
 </section>
 
-<!-- Features Section -->
+<!-- Features Section with Enhanced Animations -->
 <section class="py-5">
     <div class="container">
-        <h2 class="text-center mb-5">Experience the Ultimate Travel Platform</h2>
+        <h2 class="text-center mb-5 animate zoom-in">Experience the Ultimate Travel Platform</h2>
         <div class="row g-4">
-            <div class="col-md-4 animate fade-in" style="animation-delay: 0.2s;">
-                <div class="card h-100">
+            <div class="col-md-4">
+                <div class="card h-100 stagger-item">
                     <div class="card-body text-center p-4">
-                        <div class="feature-icon">
+                        <div class="feature-icon animate float">
                             <i class="fas fa-route"></i>
                         </div>
                         <h3 class="card-title h5">Intelligent Trip Planning</h3>
@@ -43,10 +43,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 animate fade-in" style="animation-delay: 0.4s;">
-                <div class="card h-100">
+            <div class="col-md-4">
+                <div class="card h-100 stagger-item">
                     <div class="card-body text-center p-4">
-                        <div class="feature-icon">
+                        <div class="feature-icon animate float" style="animation-delay: 0.3s;">
                             <i class="fas fa-camera-retro"></i>
                         </div>
                         <h3 class="card-title h5">Travel Memory Archive</h3>
@@ -54,10 +54,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 animate fade-in" style="animation-delay: 0.6s;">
-                <div class="card h-100">
+            <div class="col-md-4">
+                <div class="card h-100 stagger-item">
                     <div class="card-body text-center p-4">
-                        <div class="feature-icon">
+                        <div class="feature-icon animate float" style="animation-delay: 0.6s;">
                             <i class="fas fa-share-alt"></i>
                         </div>
                         <h3 class="card-title h5">Selective Sharing</h3>
@@ -69,45 +69,45 @@
     </div>
 </section>
 
-<!-- How It Works -->
+<!-- How It Works with Enhanced Animations -->
 <section class="py-5 bg-light">
     <div class="container">
-        <h2 class="text-center mb-5">How It Works</h2>
+        <h2 class="text-center mb-5 animate zoom-in">How It Works</h2>
         <div class="row align-items-center mb-5">
             <div class="col-lg-6 animate slide-in">
                 <h3 class="h4">Planning Your Next Adventure</h3>
                 <p>Input your preferences, including destination, budget, and travel dates. Our intelligent system will generate a personalized itinerary with interactive maps and budget breakdowns.</p>
                 <ul class="list-unstyled mb-4">
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Set your travel preferences</li>
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Get personalized recommendations</li>
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Visualize your journey on interactive maps</li>
+                    <li class="animate slide-in" style="animation-delay: 0.2s;"><i class="fas fa-check-circle text-success me-2"></i> Set your travel preferences</li>
+                    <li class="animate slide-in" style="animation-delay: 0.4s;"><i class="fas fa-check-circle text-success me-2"></i> Get personalized recommendations</li>
+                    <li class="animate slide-in" style="animation-delay: 0.6s;"><i class="fas fa-check-circle text-success me-2"></i> Visualize your journey on interactive maps</li>
                 </ul>
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('planner.create_plan') }}" class="btn btn-primary">Plan Your Trip</a>
+                    <a href="{{ url_for('planner.create_plan') }}" class="btn btn-primary animate pulse">Plan Your Trip</a>
                 {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary animate pulse">Get Started</a>
                 {% endif %}
             </div>
-            <div class="col-lg-6 animate slide-in" style="animation-delay: 0.3s;">
+            <div class="col-lg-6 animate zoom-in" style="animation-delay: 0.3s;">
                 <img src="{{ url_for('static', filename='img/planning.png') }}" alt="Trip Planning" class="img-fluid rounded">
             </div>
         </div>
         <div class="row align-items-center flex-row-reverse">
-            <div class="col-lg-6 animate slide-in" style="animation-delay: 0.2s;">
+            <div class="col-lg-6 animate slide-in-right" style="animation-delay: 0.2s;">
                 <h3 class="h4">Preserving Your Travel Memories</h3>
                 <p>Upload photos, write reflections, and record locations from your past trips. Our platform organizes them into a beautiful travel timeline and analyzes your preferences.</p>
                 <ul class="list-unstyled mb-4">
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Upload travel photos and notes</li>
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Create a personal travel timeline</li>
-                    <li><i class="fas fa-check-circle text-success me-2"></i> Discover your travel preferences and patterns</li>
+                    <li class="animate slide-in-right" style="animation-delay: 0.2s;"><i class="fas fa-check-circle text-success me-2"></i> Upload travel photos and notes</li>
+                    <li class="animate slide-in-right" style="animation-delay: 0.4s;"><i class="fas fa-check-circle text-success me-2"></i> Create a personal travel timeline</li>
+                    <li class="animate slide-in-right" style="animation-delay: 0.6s;"><i class="fas fa-check-circle text-success me-2"></i> Discover your travel preferences and patterns</li>
                 </ul>
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary">Add a Memory</a>
+                    <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary animate pulse">Add a Memory</a>
                 {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary animate pulse">Get Started</a>
                 {% endif %}
             </div>
-            <div class="col-lg-6 animate slide-in">
+            <div class="col-lg-6 animate zoom-in">
                 <img src="{{ url_for('static', filename='img/memories.png') }}" alt="Travel Memories" class="img-fluid rounded">
             </div>
         </div>

@@ -1,0 +1,9 @@
+  Add-ai-recommendation-system-in-viewing-plans-page[m 0619dae [[34morigin/Add-ai-recommendation-system-in-viewing-plans-page[m] Reset host address in run.py
+  address-map-ai-feature                            [m 9810250 Updated planner functionality and added recommendation template
+  address-map-ai-suggestions                        [m 9810250 Updated planner functionality and added recommendation template
+  ai-recommendations-glm-z1                         [m da2fe0c [[34morigin/ai-recommendations-glm-z1[m] Implement location-based AI recommendations using THUDM/GLM-Z1-9B-0414 model
+  enhanced-travel-recommendations                   [m a700fca [[34morigin/enhanced-travel-recommendations[m: ahead 1] Fix memory creation error and enhance travel planner UI
+  fix-memory-edit-template                          [m 26a1527 [[34morigin/fix-memory-edit-template[m] Fix memory edit template to use visit_date instead of date attribute
+* [32mmain                                              [m 2ffe277 [[34morigin/main[m] Fix photo gallery issues and memory routes
+  new-feature-branch                                [m 367faf3 [[34morigin/new-feature-branch[m: ahead 3] Merge in progress
+  temp-branch                                       [m be19bb7 Merge from enhanced-travel-recommendations: Fix memory creation error and enhance travel planner UI

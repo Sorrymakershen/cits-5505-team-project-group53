@@ -138,6 +138,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Form validation before submit
+    document.querySelector('form').addEventListener('submit', function(event) {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (!startDate || !endDate) {
+            event.preventDefault();
+            if (!startDate) {
+                document.getElementById('start_date').classList.add('is-invalid');
+            }
+            if (!endDate) {
+                document.getElementById('end_date').classList.add('is-invalid');
+            }
+        }
+    });
+    
     // Initialize destination address validation
     initDestinationValidation();
 });

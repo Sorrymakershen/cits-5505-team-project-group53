@@ -33,12 +33,25 @@ def create_plan():
     # Pre-fill destination from request args (for recommendations integration)
     destination = request.args.get('destination', '')
     
-    if request.method == 'POST':
-        # Get form data
+    if request.method == 'POST':        # Get form data
         title = request.form.get('title')
         destination = request.form.get('destination')
-        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
-        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+        
+        # Validate and parse dates
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        
+        if not start_date_str:
+            flash('Start date is required', 'danger')
+            return render_template('planner/create.html', destination=destination)
+            
+        if not end_date_str:
+            flash('End date is required', 'danger')
+            return render_template('planner/create.html', destination=destination)
+            
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        
         budget = float(request.form.get('budget') or 0)
         interests = request.form.get('interests')
         is_public = 'is_public' in request.form

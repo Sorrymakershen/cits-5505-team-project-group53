@@ -192,11 +192,10 @@
         {% if memory.photos.count() > 0 %}
             <div class="row mt-5">
                 <div class="col-12">
-                    <h3 class="mb-3">Photo Gallery</h3>
-                    <div class="memory-photo-gallery">
+                    <h3 class="mb-3">Photo Gallery</h3>                    <div class="memory-photo-gallery">
                         {% for photo in memory.photos %}
                             <div class="gallery-item animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
-                                <img src="{{ url_for('static', filename='uploads/memories/' + photo.filename) }}" alt="{{ photo.caption or memory.title }}">
+                                <img src="{{ url_for('static', filename='uploads/' + photo.filename) }}" alt="{{ photo.caption or memory.title }}">
                                 {% if photo.caption %}
                                     <div class="caption-overlay">
                                         <p class="mb-0">{{ photo.caption }}</p>

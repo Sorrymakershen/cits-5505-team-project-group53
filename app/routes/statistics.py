@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from app import db
+from app import db, csrf
 from app.models.travel_plan import TravelPlan
 from app.models.user import User
 from datetime import datetime
@@ -25,6 +25,7 @@ def index():
 
 @statistics_bp.route('/set-home-location', methods=['POST'])
 @login_required
+@csrf.exempt  # 禁用此路由的 CSRF 保护
 def set_home_location():
     """Set user's home location"""
     if request.method == 'POST':
@@ -47,6 +48,7 @@ def set_home_location():
 
 @statistics_bp.route('/validate-address', methods=['POST'])
 @login_required
+@csrf.exempt  # 禁用此路由的 CSRF 保护
 def validate_address():
     """API endpoint to validate an address using Nominatim"""
     data = request.json

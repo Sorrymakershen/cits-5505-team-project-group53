@@ -291,8 +291,7 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Travel Summary and Smart Suggestions -->
+          <!-- Travel Summary and Smart Suggestions -->
         <div class="row">
             <div class="col-lg-7 mb-4">
                 <div class="card h-100">
@@ -374,10 +373,9 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted mb-4">Your home address is used to calculate travel distances and visualize routes. It is stored securely and only used within the app.</p>
-                
-                <form id="homeLocationForm" method="post" action="{{ url_for('statistics.set_home_location') }}">
+            <div class="modal-body">                <p class="text-muted mb-4">Your home address is used to calculate travel distances and visualize routes. It is stored securely and only used within the app.</p>
+                  <form id="homeLocationForm" method="post" action="{{ url_for('statistics.set_home_location') }}">
+                    <!-- 不需要 CSRF token -->
                     <div class="mb-3 address-input-container">
                         <label for="address" class="form-label">Your Home Address</label>
                         <div class="input-group">
@@ -444,10 +442,13 @@
         }
         
         // Load recommendations
-        fetchRecommendations();
+        fetchRecommendations('recommendationsContainer', '{{ url_for("statistics.get_ai_recommendations") }}');
         
         // Initialize location setting functionality
         initLocationSetting();
+        
+        // Initialize enhanced data visualizations
+        initDataVisualizations();
     });
     
     function initializeStatisticsMap() {
@@ -843,3 +844,105 @@
     }
 </script>
 {% endblock %}
+
+<!-- Enhanced Data Analysis Sections -->
+<section class="py-4">
+    <div class="container">
+        <h2 class="mb-4">Advanced Travel Insights</h2>
+        
+        <!-- Travel Timeline -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-stream me-2 text-primary"></i> Your Travel Timeline</h4>
+                        <div id="travelTimeline" data-source="{{ url_for('statistics.get_travel_timeline') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading your travel timeline...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expense Chart and Destination Comparison -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-pie me-2 text-primary"></i> Expense Visualization</h4>
+                        
+                        {% if stats.cost_breakdown %}
+                            <div id="expenseChart"
+                                data-categories='{{ stats.cost_breakdown.keys()|list|tojson }}'
+                                data-values='{{ stats.cost_breakdown.values()|list|tojson }}'>
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Generating expense chart...</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i> Add costs to your travel plans to see expense visualizations.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-radar me-2 text-primary"></i> Destination Comparison</h4>
+                        <div id="destinationComparison" data-source="{{ url_for('statistics.get_destination_comparison') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your destinations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Travel Trend Analysis and Heat Map -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-line me-2 text-primary"></i> Travel Trends</h4>
+                        <div id="trendAnalysis" data-source="{{ url_for('statistics.get_trend_analysis') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your travel trends...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-globe me-2 text-primary"></i> Travel Heatmap</h4>
+                        {% if home_address %}
+                            <div id="travelHeatmap" class="map-container"></div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i> Set your home location to view travel intensity heatmap.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

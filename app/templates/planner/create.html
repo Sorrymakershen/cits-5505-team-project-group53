@@ -44,8 +44,8 @@
             <div class="card animate fade-in">
                 <div class="card-body p-4">
                     <h1 class="card-title mb-4">Plan Your Trip</h1>
-                    
-                    <form method="post" class="needs-validation" novalidate>
+                      <form method="post" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="title" class="form-label">Trip Name</label>
                             <input type="text" class="form-control" id="title" name="title" required>
@@ -138,6 +138,61 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Form validation before submit
+    document.querySelector('form').addEventListener('submit', function(event) {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        const destination = document.getElementById('destination').value;
+        const title = document.getElementById('title').value;
+        
+        let isValid = true;
+        
+        if (!startDate) {
+            document.getElementById('start_date').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!endDate) {
+            document.getElementById('end_date').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!destination) {
+            document.getElementById('destination').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!title) {
+            document.getElementById('title').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        // Budget validation
+        const budgetInput = document.getElementById('budget');
+        if (budgetInput.value) {
+            const budgetValue = parseFloat(budgetInput.value);
+            if (isNaN(budgetValue) || budgetValue < 0) {
+                budgetInput.classList.add('is-invalid');
+                
+                // Create custom feedback if not exists
+                let feedback = budgetInput.parentElement.querySelector('.invalid-feedback');
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    budgetInput.parentElement.appendChild(feedback);
+                }
+                
+                feedback.textContent = 'Please enter a valid positive amount';
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
+    
     // Initialize destination address validation
     initDestinationValidation();
 });
@@ -181,18 +236,94 @@ function initDestinationValidation() {
         
         // Call Nominatim API
         fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response error: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data && data.length > 0) {
                     renderSuggestions(data);
                 } else {
-                    suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found</div>';
+                    suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found. Try a more specific location name.</div>';
                 }
             })
             .catch(error => {
                 console.error('Error fetching address suggestions:', error);
-                suggestionsContainer.innerHTML = '<div class="address-suggestion text-center text-danger">Error searching for address</div>';
+                suggestionsContainer.innerHTML = `
+                    <div class="address-suggestion text-center text-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error searching for address. Please try again or enter coordinates manually.
+                    </div>`;
+                
+                // Show manual coordinates option
+                const manualOption = document.createElement('div');
+                manualOption.className = 'address-suggestion text-primary';
+                manualOption.innerHTML = '<i class="fas fa-map-marked-alt me-2"></i> Enter coordinates manually';
+                
+                manualOption.addEventListener('click', function() {
+                    showManualCoordinatesForm();
+                });
+                
+                suggestionsContainer.appendChild(manualOption);
             });
+    }
+    
+    // Function to show manual coordinates input form
+    function showManualCoordinatesForm() {
+        suggestionsContainer.classList.add('d-none');
+        
+        const manualFormContainer = document.createElement('div');
+        manualFormContainer.className = 'mt-3 p-3 border rounded';
+        manualFormContainer.innerHTML = `
+            <h6 class="mb-3">Enter Coordinates Manually</h6>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label for="manual-lat" class="form-label">Latitude</label>
+                    <input type="number" step="any" class="form-control" id="manual-lat" placeholder="e.g. 51.5074">
+                </div>
+                <div class="col-6">
+                    <label for="manual-lng" class="form-label">Longitude</label>
+                    <input type="number" step="any" class="form-control" id="manual-lng" placeholder="e.g. -0.1278">
+                </div>
+            </div>
+            <div class="mb-2">
+                <label for="manual-name" class="form-label">Location Name</label>
+                <input type="text" class="form-control" id="manual-name" placeholder="e.g. London, UK">
+            </div>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-manual">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="save-manual">Save Coordinates</button>
+            </div>
+        `;
+        
+        // Insert after the suggestions container
+        destinationInput.parentNode.parentNode.appendChild(manualFormContainer);
+        
+        // Add event listeners
+        document.getElementById('cancel-manual').addEventListener('click', function() {
+            manualFormContainer.remove();
+        });
+        
+        document.getElementById('save-manual').addEventListener('click', function() {
+            const lat = document.getElementById('manual-lat').value;
+            const lng = document.getElementById('manual-lng').value;
+            const name = document.getElementById('manual-name').value;
+            
+            if (!lat || !lng || !name) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Set the input values
+            destinationInput.value = name;
+            document.getElementById('lat').value = lat;
+            document.getElementById('lng').value = lng;
+            
+            // Remove the manual form
+            manualFormContainer.remove();
+        });
     }
     
     // Render suggestions

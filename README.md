@@ -1,3 +1,5 @@
+
+=======
 ### Travel Planning Platform
 
 A smart travel planning tool designed to assist users in creating personalised travel itineraries based on individual preferences, with the added functionality of sharing plans with travel companions.
@@ -165,3 +167,4 @@ Visit the About, Privacy Policy, and Terms of Service pages for more information
 
 
 © 2025
+

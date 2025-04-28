@@ -13,14 +13,18 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
-        
-        # Validate input
+          # Validate input
         if not all([username, email, password, confirm_password]):
             flash('All fields are required', 'danger')
             return render_template('auth/register.html')
             
         if password != confirm_password:
             flash('Passwords do not match', 'danger')
+            return render_template('auth/register.html')
+            
+        # Check if password contains at least one uppercase letter
+        if not any(c.isupper() for c in password):
+            flash('Password must contain at least one uppercase letter', 'danger')
             return render_template('auth/register.html')
             
         # Check if user already exists

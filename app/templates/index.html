@@ -9,14 +9,14 @@
             <div class="col-lg-6 animate fade-in">
                 <h1 class="animate slide-in" style="animation-delay: 0.2s;">Your Journey, Your Story</h1>
                 <p class="lead mb-4 animate slide-in" style="animation-delay: 0.4s;">Plan your next adventure and preserve your travel memories all in one place.</p>
-                <div class="d-flex gap-3 animate slide-in" style="animation-delay: 0.6s;">
+                <div class="d-flex gap-3 animate slide-in align-items-center flex-wrap" style="animation-delay: 0.6s;">
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('planner.create_plan') }}" class="btn btn-light btn-lg">Plan a Trip</a>
-                        <a href="{{ url_for('planner.recommend_destinations') }}" class="btn btn-primary btn-lg pulse">Smart Recommendations</a>
-                        <a href="{{ url_for('memories.create_memory') }}" class="btn btn-outline-light btn-lg">Add a Memory</a>
+                        <a href="{{ url_for('planner.create_plan') }}" class="btn btn-light btn-md">Plan a Trip</a>
+                        <a href="{{ url_for('planner.recommend_destinations') }}" class="btn btn-primary btn-md pulse">Smart Recommendations</a>
+                        <a href="{{ url_for('memories.create_memory') }}" class="btn btn-outline-light btn-md">Add a Memory</a>
                     {% else %}
-                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg pulse">Get Started</a>
-                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Sign In</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-md pulse">Get Started</a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-md">Sign In</a>
                     {% endif %}
                 </div>
             </div>

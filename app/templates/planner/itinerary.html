@@ -3,7 +3,11 @@
 {% block title %}Manage Itinerary - {{ plan.title }} {% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="container py-5" 
+     data-plan-id="{{ plan.id }}" 
+     data-manage-itinerary-url="{{ url_for('planner.manage_itinerary', plan_id=plan.id) }}"
+     data-get-itinerary-data-url="{{ url_for('planner.get_itinerary_data', plan_id=plan.id) }}"
+     data-edit-plan-url="{{ url_for('planner.edit_plan', plan_id=plan.id) }}">
     <div class="row mb-4">
         <div class="col">
             <div class="d-flex align-items-center mb-2">
@@ -110,7 +114,7 @@
                                 </thead>
                                 <tbody>
                                     {% for item in items %}
-                                        <tr class="animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                                        <tr class="animate fade-in" data-delay="{{ loop.index0 * 0.1 }}">
                                             <td>{{ item.day }}</td>
                                             <td>{{ item.time or '-' }}</td>
                                             <td>{{ item.activity }}</td>
@@ -168,6 +172,13 @@
 
 {% block extra_js %}
 <script>
+    // 从HTML数据属性获取后端变量
+    const container = document.querySelector('.container.py-5');
+    const PLAN_ID = container.dataset.planId;
+    const MANAGE_ITINERARY_URL = container.dataset.manageItineraryUrl;
+    const GET_ITINERARY_DATA_URL = container.dataset.getItineraryDataUrl;
+    const EDIT_PLAN_URL = container.dataset.editPlanUrl;
+    
     // Initialize Leaflet map when the page loads
     document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('planMap')) {
@@ -179,12 +190,17 @@
         
         // setup delete buttons
         setupDeleteActivityButtons();
+        
+        // 应用动画延迟
+        document.querySelectorAll('.animate.fade-in[data-delay]').forEach(element => {
+            const delay = element.getAttribute('data-delay');
+            element.style.animationDelay = delay + 's';
+        });
     });
     
     // add markers to the map
     function setupAddActivityForm() {
         const form = document.getElementById('addActivityForm');
-        const planId = {{ plan.id }};
         
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -203,7 +219,7 @@
             });
             
             // send data to server
-            fetch('{{ url_for("planner.manage_itinerary", plan_id=plan.id) }}', {
+            fetch(MANAGE_ITINERARY_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -259,7 +275,7 @@
     
     // update map with new markers
     function refreshItineraryData() {
-        fetch(`{{ url_for('planner.get_itinerary_data', plan_id=plan.id) }}`)
+        fetch(GET_ITINERARY_DATA_URL)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -323,7 +339,7 @@
         
         allItems.forEach((item, index) => {
             html += `
-                <tr class="animate fade-in" style="animation-delay: ${index * 0.05}s;">
+                <tr class="animate fade-in" data-delay="${index * 0.05}">
                     <td>${item.day}</td>
                     <td>${item.time || '-'}</td>
                     <td>${item.activity}</td>
@@ -331,7 +347,7 @@
                     <td>${item.cost ? '$' + item.cost : '-'}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <a href="{{ url_for('planner.edit_plan', plan_id=plan.id) }}?item_id=${item.id}" class="btn btn-outline-primary">
+                            <a href="${EDIT_PLAN_URL}?item_id=${item.id}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <button type="button" class="btn btn-outline-danger delete-item-btn" data-item-id="${item.id}">
@@ -392,9 +408,7 @@
     
     // delete itinerary item
     function deleteItineraryItem(itemId) {
-        const planId = {{ plan.id }};
-        
-        fetch(`/planner/${planId}/delete_itinerary_item`, {
+        fetch(`/planner/${PLAN_ID}/delete_itinerary_item`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

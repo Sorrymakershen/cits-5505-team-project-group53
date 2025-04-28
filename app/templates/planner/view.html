@@ -891,63 +891,62 @@
                 // check response status
                 if (!response.ok) {
                     return response.json().then(errorData => {
-                        // if server returns JSON error
                         throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
                     }).catch(jsonError => {
-                        // if couldn't parse JSON
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     });
                 }
                 return response.json();
             })
             .then(data => {
-                // Re-enable button and hide spinner
+                // Show success message
+                showToast('Activity has been added to your itinerary!', 'success');
+                
+                // Update the button state to show "Added"
                 if (buttonElement) {
-                    buttonElement.disabled = false;
-                    buttonElement.innerHTML = '<i class="fas fa-plus me-1"></i> Add';
+                    buttonElement.textContent = 'Added';
+                    buttonElement.classList.remove('btn-outline-primary');
+                    buttonElement.classList.add('btn-success');
+                    buttonElement.disabled = true;
                 }
                 
                 if (data.success) {
-                    // Remove the success toast message
-                    // showToast('Activity has been added to your itinerary', 'success');
+                    console.log('Activity added successfully, now updating UI...');
                     
-                    // Update itinerary section dynamically
-                    updateItinerary();
-                    
-                    // update map markers if map is initialized
-                    // Ensure updateMapMarkers is called with the correct data after adding
-                    if (data.itinerary_items_json && window.planMap) {
+                    // Update itinerary section dynamically with new data
+                    if (data.itinerary_items_json) {
                         try {
-                            console.log('Calling updateMapMarkers from addRecommendation success:', data.itinerary_items_json); // Log data before calling
-                            updateMapMarkers(data.itinerary_items_json);
-                            console.log('Map markers updated after adding recommendation');
-                        } catch (mapError) {
-                            console.error('Error updating map markers:', mapError);
+                            // First, update map markers if map exists
+                            if (window.planMap) {
+                                console.log('Updating map markers with new data');
+                                updateMapMarkers(data.itinerary_items_json);
+                            }
+                            
+                            // Then get the full itinerary data
+                            updateItinerary(true);
+                        } catch (error) {
+                            console.error('Error updating UI after adding activity:', error);
                         }
-                    }
-                    
-                    // update the button state
-                    if (buttonElement) {
-                        buttonElement.textContent = 'Added';
-                        buttonElement.classList.remove('btn-primary');
-                        buttonElement.classList.add('btn-success');
-                        buttonElement.disabled = true;
+                    } else {
+                        // Fallback to standard update if no items data received
+                        updateItinerary();
                     }
                 } else {
+                    // Reset button state on failure
+                    if (buttonElement) {
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = '<i class="fas fa-plus"></i> Add';
+                    }
                     showToast(data.message || 'Failed to add activity', 'danger');
                 }
             })
             .catch(error => {
                 console.error('Error adding recommendation:', error);
-                const errorAlert = document.createElement('div');
-                errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-3';
-                errorAlert.innerHTML = `
-                    Error adding activity: ${error.message || 'Server error'}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                recommendationsContainer.prepend(errorAlert);
                 
-                // reset button state
+                // Show error message
+                showToast(`Error adding activity: ${error.message || 'Server error'}`, 'danger');
+                
+                // Reset button state
                 if (buttonElement) {
                     buttonElement.disabled = false;
                     buttonElement.innerHTML = '<i class="fas fa-plus"></i> Add';
@@ -956,8 +955,20 @@
         }
         
         // Function to update itinerary section without refreshing page
-        function updateItinerary() {
+        function updateItinerary(isHighlightNewest = false) {
             console.log('Starting to update itinerary...');
+            // Show a small loading indicator
+            const itineraryContainer = document.getElementById('itinerary-container');
+            let loadingIndicator = null;
+            
+            if (itineraryContainer) {
+                loadingIndicator = document.createElement('div');
+                loadingIndicator.className = 'text-center p-2';
+                loadingIndicator.id = 'itinerary-loading';
+                loadingIndicator.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> <span class="small">Updating itinerary...</span>';
+                itineraryContainer.appendChild(loadingIndicator);
+            }
+            
             fetch(GET_ITINERARY_DATA_URL)
             .then(response => {
                 console.log('Get response:', response.status);
@@ -967,217 +978,271 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Get data successfully:', data);
-                if (data.success) {
-                    // update total cost and budget
-                    if (data.total_cost !== undefined) {
-                        const totalCostElements = document.querySelectorAll('.fs-4, .small.text-muted.mb-4 span:first-child');
-                        totalCostElements.forEach(el => {
-                            if (el.classList.contains('fs-4')) {
-                                el.textContent = '$' + data.total_cost;
-                            } else {
-                                el.textContent = 'Spent: $' + data.total_cost;
-                            }
-                        });
-                        
-                        // update progress bar
-                        const progressBar = document.querySelector('.progress-bar');
-                        if (progressBar && data.budget) {
-                            const percentage = (data.total_cost / data.budget) * 100;
-                            progressBar.style.width = percentage + '%';
-                            progressBar.setAttribute('aria-valuenow', percentage);
+                console.log('Received itinerary data:', data);
+                
+                // Remove loading indicator if it exists
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                
+                if (!data.success) {
+                    console.warn('Server returned unsuccessful status:', data.message);
+                    return;
+                }
+                
+                // update total cost and budget
+                if (data.total_cost !== undefined) {
+                    const totalCostElements = document.querySelectorAll('.fs-4, .small.text-muted.mb-4 span:first-child');
+                    totalCostElements.forEach(el => {
+                        if (el.classList.contains('fs-4')) {
+                            el.textContent = '$' + data.total_cost;
+                        } else {
+                            el.textContent = 'Spent: $' + data.total_cost;
+                        }
+                    });
+                    
+                    // update progress bar
+                    const progressBar = document.querySelector('.progress-bar');
+                    if (progressBar && data.budget) {
+                        const percentage = (data.total_cost / data.budget) * 100;
+                        progressBar.style.width = percentage + '%';
+                        progressBar.setAttribute('aria-valuenow', percentage);
+                    }
+                }
+                
+                // update categories
+                if (data.categories) {
+                    // check if categories section exists
+                    const categoriesTitle = document.querySelector('.card-body h5');
+                    let categoriesContainer = null;
+                    
+                    if (categoriesTitle && categoriesTitle.textContent === 'Expenses by Category') {
+                        //if it exists, find the next sibling
+                        categoriesContainer = categoriesTitle.nextElementSibling;
+                    } else {
+                        // if not, create a new section
+                        const budgetCard = document.querySelector('.card-body .progress').closest('.card-body');
+                        if (budgetCard) {
+                            let categoriesSection = document.createElement('div');
+                            categoriesSection.innerHTML = '<h5>Expenses by Category</h5><div class="mb-4"></div>';
+                            budgetCard.appendChild(categoriesSection);
+                            categoriesContainer = categoriesSection.querySelector('.mb-4');
                         }
                     }
                     
-                    // update categories
-                    if (data.categories) {
-                        // check if categories section exists
-                        const categoriesTitle = document.querySelector('.card-body h5');
-                        let categoriesContainer = null;
+                    // if categoriesContainer exists, update its content
+                    if (categoriesContainer) {
+                        let categoriesHTML = '';
                         
-                        if (categoriesTitle && categoriesTitle.textContent === 'Expenses by Category') {
-                            //if it exists, find the next sibling
-                            categoriesContainer = categoriesTitle.nextElementSibling;
-                        } else {
-                            // if not, create a new section
-                            const budgetCard = document.querySelector('.card-body .progress').closest('.card-body');
-                            if (budgetCard) {
-                                let categoriesSection = document.createElement('div');
-                                categoriesSection.innerHTML = '<h5>Expenses by Category</h5><div class="mb-4"></div>';
-                                budgetCard.appendChild(categoriesSection);
-                                categoriesContainer = categoriesSection.querySelector('.mb-4');
-                            }
-                        }
-                        
-                        // if categoriesContainer exists, update its content
-                        if (categoriesContainer) {
-                            let categoriesHTML = '';
-                            
-                            Object.entries(data.categories).forEach(([category, amount]) => {
-                                const percentage = (amount / data.total_cost) * 100 || 0;
-                                categoriesHTML += `
-                                    <div class="mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span>${category}</span>
-                                            <span>$${amount}</span>
-                                        </div>
-                                        <div class="progress" style="height: 5px; border-radius: 5px;">
-                                            <div class="progress-bar" role="progressbar" 
-                                                style="width: ${percentage}%;" 
-                                                aria-valuenow="${percentage}" 
-                                                aria-valuemin="0" 
-                                                aria-valuemax="100">
-                                            </div>
+                        Object.entries(data.categories).forEach(([category, amount]) => {
+                            const percentage = (amount / data.total_cost) * 100 || 0;
+                            categoriesHTML += `
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>${category}</span>
+                                        <span>$${amount}</span>
+                                    </div>
+                                    <div class="progress" style="height: 5px; border-radius: 5px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                            style="width: ${percentage}%;" 
+                                            aria-valuenow="${percentage}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
                                         </div>
                                     </div>
-                                `;
-                            });
-                            
-                            categoriesContainer.innerHTML = categoriesHTML;
+                                </div>
+                            `;
+                        });
+                        
+                        categoriesContainer.innerHTML = categoriesHTML;
+                    }
+                }
+                
+                // update itinerary content
+                if (data.itinerary_by_day) {
+                    console.log('Updating itinerary section with new data');
+                    
+                    // Check if we're updating an existing itinerary section or need to create a new one
+                    let itineraryRow = document.querySelector('.row:has(#itinerary-container)');
+                    
+                    if (!itineraryRow) {
+                        // We need to create the entire itinerary section
+                        console.log('Creating new itinerary section');
+                        const mainContainer = document.querySelector('.container.py-5');
+                        
+                        if (!mainContainer) {
+                            console.error('Cannot find main container');
+                            return;
                         }
+                        
+                        // Create the header row
+                        const headerRow = document.createElement('div');
+                        headerRow.className = 'row mb-4';
+                        headerRow.innerHTML = `
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h2>Itinerary</h2>
+                                    <a href="/planner/${PLAN_ID}/itinerary" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i> Add Activity
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        
+                        mainContainer.appendChild(headerRow);
+                        
+                        // Create the content row
+                        itineraryRow = document.createElement('div');
+                        itineraryRow.className = 'row';
+                        mainContainer.appendChild(itineraryRow);
                     }
                     
-                    try {
-                        // update itinerary content
-                        if (data.itinerary_by_day) {
-                            console.log('start to update itinerary content');
-                            // get the itinerary section
-                            const itinerarySection = document.querySelector('#itinerary-container');
-                            
-                            if (itinerarySection) {
-                                let itineraryHTML = '';
-                                
-                                // check if itinerary_by_day is an array
-                                if (!Array.isArray(data.itinerary_by_day)) {
-                                    console.error('Itinerary data format error:', data.itinerary_by_day);
-                                    return;
-                                }
-                                
-                                // Generate itinerary HTML
-                                data.itinerary_by_day.forEach(([day, items]) => {
-                                    if (!Array.isArray(items)) {
-                                        console.error('Days data format error:', items);
-                                        return;
-                                    }
-                                    
-                                    let dayHTML = `
-                                    <div class="mb-4 day-container">
-                                        <div class="bg-light rounded p-3 mb-3 itinerary-day">
-                                            <h4 class="mb-0">Day ${day}: ${data.day_dates ? data.day_dates[day-1] : ''}</h4>
-                                        </div>
-                                    `;
-                                    
-                                    items.forEach(item => {
-                                        if (!item || typeof item !== 'object') {
-                                            console.error('Itinerary items data format error:', item);
-                                            return;
-                                        }
-                                        
-                                        dayHTML += `
-                                        <div class="itinerary-item animate fade-in" id="item-${item.id}">
-                                            <div class="d-flex flex-column flex-md-row justify-content-between">
-                                                <div class="itinerary-content">
-                                                    <h5>${item.activity || ''}</h5>
-                                                    ${item.location ? `
-                                                    <div class="mb-2">
-                                                        <i class="fas fa-map-marker-alt text-danger me-2"></i>
-                                                        ${item.location}
-                                                    </div>
-                                                    ` : ''}
-                                                    ${item.cost ? `
-                                                    <div class="mb-2">
-                                                        <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                                        $${item.cost}
-                                                    </div>
-                                                    ` : ''}
-                                                    ${item.time ? `
-                                                    <div class="mb-2">
-                                                        <i class="far fa-clock text-primary me-1"></i>
-                                                        ${item.time}
-                                                    </div>
-                                                    ` : ''}
-                                                    ${item.notes ? `
-                                                    <p class="text-muted">${item.notes}</p>
-                                                    ` : ''}
-                                                </div>
-                                                <div class="itinerary-actions">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary edit-time-btn" 
-                                                            data-item-id="${item.id}" data-bs-toggle="tooltip" 
-                                                            title="Set/edit time">
-                                                        <i class="fas fa-clock"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2 delete-item-btn"
-                                                            data-item-id="${item.id}" data-bs-toggle="tooltip"
-                                                            title="Remove activity">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        `;
-                                    });
-                                    
-                                    dayHTML += `</div>`;
-                                    itineraryHTML += dayHTML;
-                                });
-                                
-                                // if no itinerary items, show a message
-                                if (data.itinerary_by_day.length === 0) {
-                                    itineraryHTML = `
-                                    <div class="text-center py-5">
+                    // Check if we're updating an empty or existing itinerary
+                    if (data.itinerary_by_day.length === 0) {
+                        // Empty itinerary - show the empty state
+                        itineraryRow.innerHTML = `
+                            <div class="col-12">
+                                <div class="card animate fade-in" data-delay="0.3">
+                                    <div class="card-body text-center py-5">
                                         <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
                                         <h3>No itinerary items yet</h3>
                                         <p>Start planning your daily activities for this trip.</p>
-                                        <a href="{{ url_for('planner.manage_itinerary', plan_id=plan.id) }}" class="btn btn-primary mt-3">
+                                        <a href="/planner/${PLAN_ID}/itinerary" class="btn btn-primary mt-3">
                                             Add Activities
                                         </a>
                                     </div>
-                                    `;
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // We have itinerary items - create or update the card
+                        let itineraryCard = itineraryRow.querySelector('.card');
+                        
+                        if (!itineraryCard) {
+                            // Create the card structure
+                            itineraryRow.innerHTML = `
+                                <div class="col-12">
+                                    <div class="card animate fade-in" data-delay="0.3">
+                                        <div class="card-body p-4" id="itinerary-container">
+                                            <!-- Itinerary items will be inserted here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Now get the itinerary container and update its content
+                        const itineraryContainer = document.getElementById('itinerary-container') || 
+                                                  itineraryRow.querySelector('.card-body');
+                        
+                        if (!itineraryContainer) {
+                            console.error('Cannot find or create itinerary container');
+                            return;
+                        }
+                        
+                        let itineraryHTML = '';
+                        
+                        // Generate HTML for each day and its items
+                        data.itinerary_by_day.forEach(([day, items]) => {
+                            let dayHTML = `
+                            <div class="mb-4 day-container day-${day}">
+                                <div class="bg-light rounded p-3 mb-3 itinerary-day">
+                                    <h4 class="mb-0">Day ${day}: ${data.day_dates ? data.day_dates[day-1] : ''}</h4>
+                                </div>
+                            `;
+                            
+                            items.forEach(item => {
+                                // Check if this is a new item (for highlighting)
+                                const isNew = isHighlightNewest && item.id === data.item?.id;
+                                const highlightClass = isNew ? 'highlight-new' : '';
+                                
+                                dayHTML += `
+                                <div class="itinerary-item animate fade-in ${highlightClass}" id="item-${item.id}">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                                        <div class="itinerary-content">
+                                            <h5>${item.activity || ''}</h5>
+                                            ${item.location ? `
+                                            <div class="mb-2">
+                                                <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                                ${item.location}
+                                            </div>
+                                            ` : ''}
+                                            ${item.cost ? `
+                                            <div class="mb-2">
+                                                <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                                $${item.cost}
+                                            </div>
+                                            ` : ''}
+                                            ${item.time ? `
+                                            <div class="mb-2">
+                                                <i class="far fa-clock text-primary me-1"></i>
+                                                ${item.time}
+                                            </div>
+                                            ` : ''}
+                                            ${item.notes ? `
+                                            <p class="text-muted">${item.notes}</p>
+                                            ` : ''}
+                                        </div>
+                                        <div class="itinerary-actions">
+                                            <button type="button" class="btn btn-sm btn-outline-primary edit-time-btn" 
+                                                    data-item-id="${item.id}" data-bs-toggle="tooltip" 
+                                                    title="Set/edit time">
+                                                <i class="fas fa-clock"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger mt-2 delete-item-btn"
+                                                    data-item-id="${item.id}" data-bs-toggle="tooltip"
+                                                    title="Remove activity">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                `;
+                            });
+                            
+                            dayHTML += `</div>`;
+                            itineraryHTML += dayHTML;
+                        });
+                        
+                        // Update the DOM
+                        itineraryContainer.innerHTML = itineraryHTML;
+                        
+                        // Add event listeners to the new buttons
+                        addEventListenersToButtons();
+                        
+                        // Initialize tooltips for the new buttons
+                        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                        
+                        // If highlighting new item, add a scroll effect
+                        if (isHighlightNewest && data.item) {
+                            setTimeout(() => {
+                                const newItem = document.getElementById(`item-${data.item.id}`);
+                                if (newItem) {
+                                    newItem.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    
+                                    // Add brief highlight animation
+                                    newItem.style.transition = 'background-color 1s';
+                                    newItem.style.backgroundColor = 'rgba(var(--bs-success-rgb), 0.1)';
+                                    setTimeout(() => {
+                                        newItem.style.backgroundColor = '';
+                                    }, 2000);
                                 }
-                                
-                                // update DOM
-                                itinerarySection.innerHTML = itineraryHTML;
-                                console.log('Itinerary content updated successfully');
-                                
-                                // add event listeners to new buttons
-                                addEventListenersToButtons();
-                                
-                                // initialize tooltips
-                                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                                [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-                            } else {
-                                console.error('Cannot find itinerary section in DOM');
-                            }
-                        } else {
-                            console.log('No itinerary data to update');
-                        }
-                    } catch (renderError) {
-                        console.error(renderError);
-                    }
-                    
-                    // Update map markers if map is initialized
-                    if (data.itinerary_items_json && window.planMap) {
-                        try {
-                            console.log('Calling updateMapMarkers from updateItinerary success:', data.itinerary_items_json); // Log data before calling
-                            updateMapMarkers(data.itinerary_items_json);
-                            console.log('Map markers updated via updateItinerary'); // Add log for debugging
-                        } catch (mapError) {
-                            console.error('Update map error:', mapError);
+                            }, 300);
                         }
                     }
-                } else {
-                    console.warn('Server returned data indicating operation was unsuccessful:', data.message || 'Unknown error');
                 }
             })
             .catch(error => {
                 console.error('Error updating itinerary data:', error);
-                // Don't easily display error prompts, as this may just be a frontend update issue, the activity has been successfully added
-                if (error.toString().includes('TypeError') || error.toString().includes('SyntaxError')) {
-                    console.error('Suspected JSON parsing error or DOM operation error:', error);
-                } else {
-                    // Only display error prompts when it is determined to be a network or server issue
-                    showToast('There was an issue updating the page data, but your changes may have been saved.', 'warning');
+                
+                // Remove loading indicator if it exists
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
                 }
+                
+                // Show error message
+                showToast('There was an issue updating the itinerary. The data may be out of date.', 'warning');
             });
         }
         

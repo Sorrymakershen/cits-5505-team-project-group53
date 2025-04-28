@@ -73,14 +73,14 @@
         
         <div class="col-lg-5 mt-4 mt-lg-0">
             <!-- Current Shares -->
-            <div class="card animate fade-in" style="animation-delay: 0.3s;">
+            <div class="card animate fade-in" data-delay="0.3">
                 <div class="card-body p-4">
                     <h3 class="card-title mb-4">Shared With</h3>
                     
                     {% if shares %}
                         <div class="list-group">
                             {% for share in shares %}
-                                <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" style="animation-delay: {{ loop.index * 0.1 }}s;">
+                                <div class="list-group-item d-flex justify-content-between align-items-center animate fade-in" data-delay="{{ loop.index * 0.1 }}">
                                     <div>
                                         <h6 class="mb-0">{{ share.shared_email }}</h6>
                                         <small class="text-muted">
@@ -109,7 +109,7 @@
             </div>
             
             <!-- Plan Summary -->
-            <div class="card animate fade-in mt-4" style="animation-delay: 0.4s;">
+            <div class="card animate fade-in mt-4" data-delay="0.4">
                 <div class="card-body p-4">
                     <h3 class="card-title mb-3">Plan Summary</h3>
                     <div class="d-flex align-items-center mb-2">
@@ -144,6 +144,12 @@
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM fully loaded');
+        
+        // Apply animation delays from data attributes
+        document.querySelectorAll('.animate.fade-in[data-delay]').forEach(element => {
+            const delay = element.getAttribute('data-delay');
+            element.style.animationDelay = delay + 's';
+        });
         
         // Check if elements exist
         const makePublicCheckbox = document.getElementById('make_public');

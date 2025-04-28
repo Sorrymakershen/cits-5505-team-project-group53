@@ -356,3 +356,100 @@ footer {
   background-color: var(--primary-color);
   color: white;
 }
+
+/* AJAX Loading States */
+.loading {
+  position: relative;
+  min-height: 200px;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 1;
+}
+
+/* Memory Wall Styles */
+.memories-container .memory-img {
+  height: 200px;
+  object-fit: cover;
+}
+
+.no-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background-color: #f8f9fa;
+  color: #adb5bd;
+}
+
+.no-image-placeholder i {
+  font-size: 3rem;
+  margin-bottom: 10px;
+}
+
+/* Travel Plans Search */
+.destination-filter {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.destination-filter:hover {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+#clear-search {
+  cursor: pointer;
+}
+
+/* Notification Toast Styling */
+#notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  margin-bottom: 10px;
+}
+
+/* Drag & Drop Styles */
+.sortable-ghost {
+  opacity: 0.5;
+  background: #f1f1f1;
+}
+
+.sortable-chosen {
+  background: rgba(66, 133, 244, 0.1);
+  border: 1px dashed var(--primary-color);
+}
+
+.sortable-drag {
+  opacity: 0.8;
+  transform: rotate(1deg);
+}
+
+/* Itinerary Item Styles */
+.itinerary-item {
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: var(--border-radius);
+  background-color: white;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.itinerary-item:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}

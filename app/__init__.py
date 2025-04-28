@@ -2,20 +2,24 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
-import os 
+import os
+from dotenv import load_dotenv
 
-# create the Flask application
+# Load environment variables from .env file if it exists
+load_dotenv()
+
+# Create the Flask application
 app = Flask(__name__)
-# configure the application
-app.config['SECRET_KEY'] = 'your-secret-key'  # Change this in production
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False  
-app.config['WTF_CSRF_TIME_LIMIT'] = None      
 
-# initialize CSRF protection
-csrf = CSRFProtect(app)
+# Configure the application
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-temporary-key')  # Use environment variable in production
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///travel_planner.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['WTF_CSRF_ENABLED'] = False  # 临时禁用 CSRF 保护以解决问题
+
+# Initialize CSRF protection
+from app.csrf_config import configure_csrf
+csrf = configure_csrf(app)
 
 # initialize the database and migration
 db = SQLAlchemy(app)

@@ -33,25 +33,12 @@ def create_plan():
     # Pre-fill destination from request args (for recommendations integration)
     destination = request.args.get('destination', '')
     
-    if request.method == 'POST':        # Get form data
+    if request.method == 'POST':
+        # Get form data
         title = request.form.get('title')
         destination = request.form.get('destination')
-        
-        # Validate and parse dates
-        start_date_str = request.form.get('start_date')
-        end_date_str = request.form.get('end_date')
-        
-        if not start_date_str:
-            flash('Start date is required', 'danger')
-            return render_template('planner/create.html', destination=destination)
-            
-        if not end_date_str:
-            flash('End date is required', 'danger')
-            return render_template('planner/create.html', destination=destination)
-            
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-        
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
         budget = float(request.form.get('budget') or 0)
         interests = request.form.get('interests')
         is_public = 'is_public' in request.form
@@ -751,7 +738,7 @@ def get_itinerary_data(plan_id):
 
 @planner_bp.route('/<int:plan_id>/delete_itinerary_item', methods=['POST'])
 @login_required
-def delete_itinerary_item(plan_id):
+def standard_delete_itinerary_item(plan_id):
     """Delete an itinerary item"""
     plan = TravelPlan.query.get_or_404(plan_id)
     

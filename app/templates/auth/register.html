@@ -2,6 +2,16 @@
 
 {% block title %}Register - Travel Planning Platform{% endblock %}
 
+{% block extra_css %}
+<style>
+    .password-strength-meter{
+        position: absolute;
+        left: 0;
+        bottom: -38px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -19,7 +29,7 @@
                             <input type="email" class="form-control" id="email" name="email" required>
                             <div class="invalid-feedback">Please enter a valid email address.</div>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-5">
                             <label for="password" class="form-label">Password</label>
                             <div class="input-group">
                                 <input type="password" class="form-control" id="password" name="password" data-strength-meter="true" required>

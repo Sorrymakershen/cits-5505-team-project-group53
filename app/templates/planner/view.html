@@ -574,7 +574,7 @@
             const itemId = document.getElementById('deleteItemId').value;
 
             // Delete item via AJAX
-            fetch('{{ url_for("planner.delete_itinerary_item", plan_id=plan.id) }}', {
+            fetch('{{ url_for("planner.standard_delete_itinerary_item", plan_id=plan.id) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

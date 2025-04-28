@@ -6,12 +6,13 @@ from datetime import datetime, timedelta
 import random  # For generating random recommendations
 import requests  # add requests module for API calls
 import json  # add json module for parsing JSON data
+import os
 
 planner_bp = Blueprint('planner', __name__, url_prefix='/planner')
 
-# configuration for Gemini API
-GEMINI_API_KEY = "AIzaSyAwbiZHLVnwXMhVXOS8heweUSXSyU4FTYE"
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+# Configuration for Gemini API from environment variables
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyAwbiZHLVnwXMhVXOS8heweUSXSyU4FTYE')
+GEMINI_API_URL = os.environ.get('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent')
 
 @planner_bp.route('/')
 @login_required

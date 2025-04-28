@@ -20,7 +20,7 @@
         <div class="row g-4">
             {% if plans %}
                 {% for plan in plans %}
-                    <div class="col-md-6 col-lg-4 animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                    <div class="col-md-6 col-lg-4 animate fade-in" data-index="{{ loop.index0 }}">
                         <div class="card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -85,4 +85,14 @@
         </div>
     </div>
 </section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 为每个卡片应用动画延迟
+        document.querySelectorAll('.animate.fade-in[data-index]').forEach(element => {
+            const index = parseInt(element.getAttribute('data-index'));
+            element.style.animationDelay = (index * 0.1) + 's';
+        });
+    });
+</script>
 {% endblock %}

@@ -18,11 +18,11 @@
         <div class="col-md-8 col-lg-6">
             <div class="card animate fade-in">
                 <div class="card-body p-5">                    <h2 class="text-center mb-4">Create an Account</h2>                    <form method="post" class="needs-validation" data-validate-function="validateRegistrationForm" novalidate>
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>                        <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>
-                            <div class="invalid-feedback">Please choose a username.</div>
+                            <div class="invalid-feedback">Please choose a username with at least one uppercase letter.</div>
+                            <div class="form-text">Username must contain at least one uppercase letter.</div>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email Address</label>

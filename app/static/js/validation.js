@@ -66,6 +66,14 @@ function initPasswordStrengthMeter() {
             updatePasswordStrength(input.value, meterContainer);
         });
     });
+    
+    // Add validation for username field
+    const usernameInputs = document.querySelectorAll('input#username');
+    usernameInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            validateUsernameUppercase(input);
+        });
+    });
 }
 
 /**
@@ -144,8 +152,27 @@ function validateRegistrationForm(form) {
     let isValid = true;
     
     // Get form fields
+    const usernameInput = form.querySelector('#username');
     const passwordInput = form.querySelector('#password');
     const confirmPasswordInput = form.querySelector('#confirm_password');
+    
+    // Check if username contains uppercase letter
+    if (usernameInput && usernameInput.value.trim() !== '') {
+        if (!/[A-Z]/.test(usernameInput.value)) {
+            // Update feedback message
+            let feedback = usernameInput.nextElementSibling;
+            if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                usernameInput.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = 'Username must contain at least one uppercase letter';
+            usernameInput.setCustomValidity('Username must contain at least one uppercase letter');
+            isValid = false;
+        } else {
+            usernameInput.setCustomValidity('');
+        }
+    }
     
     // Check if passwords match
     if (passwordInput && confirmPasswordInput) {
@@ -229,6 +256,24 @@ function togglePasswordVisibility(buttonId, passwordId) {
 function isValidEmail(email) {
     const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
+}
+
+/**
+ * Validate username contains uppercase letters
+ * @param {HTMLInputElement} input - The username input element
+ * @returns {boolean} - Whether the username is valid
+ */
+function validateUsernameUppercase(input) {
+    const value = input.value;
+    const hasUppercase = /[A-Z]/.test(value);
+    
+    if (!hasUppercase && value.length > 0) {
+        input.setCustomValidity('Username must contain at least one uppercase letter');
+        return false;
+    } else {
+        input.setCustomValidity('');
+        return true;
+    }
 }
 
 /**

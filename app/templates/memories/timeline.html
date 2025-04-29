@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Memory Timeline - Travel Planning Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .timeline::after {
+        content: '';
+        position: absolute;
+        width: 6px;
+        background-color: #007bff;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        margin-left: -3px;
+        border-radius: 5px;
+    }
+    
+    .timeline-container {
+        padding: 10px 40px;
+        position: relative;
+        background-color: inherit;
+        width: 50%;
+    }
+    
+    .timeline-container::after {
+        content: '';
+        position: absolute;
+        width: 25px;
+        height: 25px;
+        right: -13px;
+        background-color: white;
+        border: 4px solid #007bff;
+        top: 15px;
+        border-radius: 50%;
+        z-index: 1;
+    }
+    
+    .timeline-left {
+        left: 0;
+    }
+    
+    .timeline-right {
+        left: 50%;
+    }
+    
+    .timeline-left::before {
+        content: " ";
+        height: 0;
+        position: absolute;
+        top: 22px;
+        width: 0;
+        z-index: 1;
+        right: 30px;
+        border: medium solid #f8f9fa;
+        border-width: 10px 0 10px 10px;
+        border-color: transparent transparent transparent #f8f9fa;
+    }
+    
+    .timeline-right::before {
+        content: " ";
+        height: 0;
+        position: absolute;
+        top: 22px;
+        width: 0;
+        z-index: 1;
+        left: 30px;
+        border: medium solid #f8f9fa;
+        border-width: 10px 10px 10px 0;
+        border-color: transparent #f8f9fa transparent transparent;
+    }
+    
+    .timeline-right::after {
+        left: -12px;
+    }
+    
+    .timeline-content {
+        padding: 20px 30px;
+        background-color: #f8f9fa;
+        position: relative;
+        border-radius: 6px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .timeline-content h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    
+    .timeline-content .date {
+        color: #666;
+        font-style: italic;
+    }
+    
+    .timeline-content p {
+        margin: 10px 0;
+    }
+    
+    .memory-img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 6px;
+        margin-top: 15px;
+    }
+    
+    .timeline-badge {
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        z-index: 10;
+    }
+    
+    .no-memories {
+        text-align: center;
+        padding: 50px 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    
+    @media screen and (max-width: 767px) {
+        .timeline::after {
+            left: 31px;
+        }
+        
+        .timeline-container {
+            width: 100%;
+            padding-left: 70px;
+            padding-right: 25px;
+        }
+        
+        .timeline-container::before {
+            left: 60px;
+            border: medium solid #f8f9fa;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #f8f9fa transparent transparent;
+        }
+    
+        .timeline-left::after, .timeline-right::after {
+            left: 18px;
+        }
+    
+        .timeline-right {
+            left: 0%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Your Memory Timeline</h2>
+                <a href="{{ url_for('memories.index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Memories
+                </a>
+            </div>
+            
+            {% if memories|length > 0 %}
+                <div class="timeline">
+                    {% for memory in memories %}
+                        <div class="timeline-container {% if loop.index is odd %}timeline-left{% else %}timeline-right{% endif %}">
+                            <div class="timeline-content">
+                                {% if memory.is_public %}
+                                    <span class="timeline-badge badge bg-success">Public</span>
+                                {% else %}
+                                    <span class="timeline-badge badge bg-secondary">Private</span>
+                                {% endif %}
+                                
+                                <h3>{{ memory.title }}</h3>
+                                
+                                {% if memory.visit_date %}
+                                    <div class="date">
+                                        <i class="far fa-calendar-alt me-1"></i> 
+                                        {{ memory.visit_date.strftime('%B %d, %Y') }}
+                                    </div>
+                                {% endif %}
+                                
+                                {% if memory.location %}
+                                    <div class="location mb-2">
+                                        <i class="fas fa-map-marker-alt me-1"></i> 
+                                        {{ memory.location }}
+                                    </div>
+                                {% endif %}
+                                
+                                {% if memory.description %}
+                                    <p>{{ memory.description|truncate(150) }}</p>
+                                {% endif %}
+                                
+                                {% set photos = memory.photos.limit(1).all() %}
+                                {% if photos|length > 0 %}
+                                    <img src="{{ url_for('static', filename='uploads/' + photos[0].filename) }}" 
+                                         alt="{{ memory.title }}" class="memory-img">
+                                {% endif %}
+                                  <div class="mt-3">
+                                    <a href="{{ url_for('memories.view_memory', memory_id=memory.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-memories">
+                    <i class="fas fa-clock fa-3x mb-3 text-muted"></i>
+                    <h4>No Memories Yet</h4>
+                    <p>You haven't created any memories yet. Start capturing your travel memories now!</p>
+                    <a href="{{ url_for('memories.create') }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus"></i> Create Memory
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

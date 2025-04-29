@@ -5,6 +5,8 @@ from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+__all__ = ['auth_bp']
+
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """User registration page"""
@@ -21,6 +23,15 @@ def register():
             
         if password != confirm_password:
             flash('Passwords do not match', 'danger')
+            return render_template('auth/register.html')
+            
+        # Validate password requirements
+        if len(password) <= 6:
+            flash('Password must be more than 6 characters', 'danger')
+            return render_template('auth/register.html')
+            
+        if not any(c.isupper() for c in password):
+            flash('Password must contain at least one capital letter', 'danger')
             return render_template('auth/register.html')
             
         # Check if user already exists
@@ -81,9 +92,19 @@ def profile():
         current_user.username = request.form.get('username', current_user.username)
         current_user.email = request.form.get('email', current_user.email)
         
-        if request.form.get('password'):
-            if request.form.get('password') == request.form.get('confirm_password'):
-                current_user.set_password(request.form.get('password'))
+        password = request.form.get('password')
+        if password:
+            if password == request.form.get('confirm_password'):
+                # Validate password requirements for profile updates too
+                if len(password) <= 6:
+                    flash('Password must be more than 6 characters', 'danger')
+                    return render_template('auth/profile.html')
+                
+                if not any(c.isupper() for c in password):
+                    flash('Password must contain at least one capital letter', 'danger')
+                    return render_template('auth/profile.html')
+                
+                current_user.set_password(password)
             else:
                 flash('Passwords do not match', 'danger')
                 return render_template('auth/profile.html')

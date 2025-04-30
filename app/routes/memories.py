@@ -203,5 +203,18 @@ def timeline():
 @login_required
 def map_view():
     """View memories on a map"""
+    from datetime import datetime, timedelta
+    
     memories = Memory.query.filter_by(user_id=current_user.id).all()
-    return render_template('memories/map.html', memories=memories)
+    
+    # Pass the Google Maps API key from configuration
+    google_maps_api_key = current_app.config.get('GOOGLE_MAPS_API_KEY', '')
+    
+    # Pass current time for marking recent memories
+    now = datetime.now()
+    
+    return render_template('memories/map.html', 
+                          memories=memories, 
+                          google_maps_api_key=google_maps_api_key,
+                          now=now,
+                          timedelta=timedelta)

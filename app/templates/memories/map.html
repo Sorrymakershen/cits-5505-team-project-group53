@@ -5,114 +5,512 @@
 {% block styles %}
 {{ super() }}
 <style>
+    .map-container {
+        position: relative;
+        padding: 1rem;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
     #map {
         height: 600px;
         width: 100%;
-        margin-bottom: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
     }
+    
+    .map-controls {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        z-index: 10;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .map-control-btn {
+        padding: 8px 12px;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .map-control-btn:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+    }
+    
     .memory-info-window {
-        max-width: 300px;
+        max-width: 320px;
+        padding: 5px;
     }
+    
     .memory-info-window h4 {
         margin-top: 0;
-        margin-bottom: 5px;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        font-weight: 600;
     }
+    
     .memory-info-window p {
-        margin-bottom: 5px;
+        margin-bottom: 8px;
+        color: #444;
     }
+    
     .memory-details-link {
         display: inline-block;
         margin-top: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .memory-thumbnail {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 1rem;
+    }
+    
+    .loader-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        border-radius: 8px;
+    }
+    
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 5px solid #3498db;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+    
+    .memory-counter {
+        background-color: #f8f9fa;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: 500;
+        color: #495057;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        display: inline-block;
+    }
+    
+    .map-legend {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        z-index: 10;
+        background-color: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    
+    .filter-bar {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .filter-title {
+        font-weight: 600;
+        color: #495057;
+        margin-right: 10px;
+    }
+    
+    .tag-pill {
+        display: inline-block;
+        padding: 5px 15px;
+        margin: 5px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background-color: #e9ecef;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .tag-pill:hover {
+        background-color: #dee2e6;
+        transform: translateY(-1px);
+    }
+    
+    .tag-pill.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .memory-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .memory-card:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .memory-card-header {
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        background-color: #f8f9fa;
+    }
+    
+    .memory-card-body {
+        padding: 15px;
+    }
+    
+    .memory-card-img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+    }
+    
+    .memory-list-item {
+        padding: 10px 15px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .memory-list-item:hover {
+        background-color: #f8f9fa;
+        border-left-color: #007bff;
+    }
+    
+    .memory-list-item.highlighted {
+        background-color: #e9f5ff;
+        border-left-color: #007bff;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+        #map {
+            height: 400px;
+        }
+        
+        .map-controls {
+            top: 10px;
+            right: 10px;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .page-header > div:last-child {
+            margin-top: 15px;
+            align-self: flex-end;
+        }
+    }
+    
+    .no-memories-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        z-index: 5;
+        border-radius: 8px;
+    }
+    
+    .no-memories-message {
+        text-align: center;
+        max-width: 80%;
+    }
+    
+    .no-memories-message h3 {
+        color: #495057;
+        margin-bottom: 1rem;
+    }
+    
+    .marker-recent {
+        color: #007bff;
+    }
+    
+    .marker-default {
+        color: #dc3545;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Your Memory Map</h1>
-    <p class="text-muted">View all your travel memories on the map</p>
+    <div class="page-header">
+        <div>
+            <h1>Your Memory Map</h1>
+            <p class="text-muted">Visualize and explore all your travel memories around the world</p>
+        </div>
+        <div>
+            <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Memory
+            </a>
+        </div>
+    </div>
     
-    <div id="map"></div>
+    <div class="filter-bar d-flex flex-wrap align-items-center justify-content-between">
+        <div>
+            <span class="filter-title">Filter by:</span>
+            <span class="tag-pill active" onclick="filterMarkersByTag('all')">All</span>
+            {% set unique_tags = [] %}
+            {% for memory in memories %}
+                {% for tag in memory.tags %}
+                    {% if tag.name not in unique_tags %}
+                        {% set _ = unique_tags.append(tag.name) %}
+                        <span class="tag-pill" onclick="filterMarkersByTag('{{ tag.name }}')">{{ tag.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+        <div id="memory-counter" class="memory-counter">
+            <i class="fas fa-map-marker-alt"></i> <span id="memory-count">0</span> memories on your map
+        </div>
+    </div>
     
-    <div class="row">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between mb-4">
-                <a href="{{ url_for('memories.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Memories
-                </a>
-                <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add New Memory
+    <div class="map-container">
+        <div id="loader" class="loader-container">
+            <div class="loader"></div>
+        </div>
+        
+        <div id="no-memories" class="no-memories-overlay" style="display: none;">
+            <div class="no-memories-message">
+                <h3>No Memories on Your Map Yet</h3>
+                <p>Start adding travel memories with locations to see them appear here.</p>
+                <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus"></i> Create Your First Memory
                 </a>
             </div>
         </div>
+        
+        <div id="map"></div>
+        
+        <div class="map-controls">
+            <button id="zoomWorld" class="map-control-btn" title="View World Map">
+                <i class="fas fa-globe-americas"></i>
+            </button>
+            <button id="toggleTerrain" class="map-control-btn" title="Toggle Terrain View">
+                <i class="fas fa-mountain"></i>
+            </button>
+            <button id="toggleHeatmap" class="map-control-btn" title="Show Heatmap">
+                <i class="fas fa-fire"></i>
+            </button>
+            <button id="showJourney" class="map-control-btn" title="Show Journey Path">
+                <i class="fas fa-route"></i>
+            </button>
+        </div>
+        
+        <div class="map-legend">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-map-marker-alt marker-default mr-2"></i>
+                <span>Regular Memory</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <i class="fas fa-map-marker-alt marker-recent mr-2"></i>
+                <span>Recent Memory (last 30 days)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Memory List</h3>
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for memory in memories %}
+                            {% if memory.lat and memory.lng %}
+                                <div class="memory-list-item" data-id="{{ memory.id }}" onclick="focusMemory({{ memory.id }})">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">{{ memory.title }}</h5>
+                                            <p class="mb-1 text-muted">
+                                                <i class="fas fa-map-marker-alt"></i> {{ memory.location }}
+                                                {% if memory.visit_date %}
+                                                    &bull; <i class="far fa-calendar-alt"></i> {{ memory.visit_date.strftime('%B %d, %Y') }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                        <a href="{{ url_for('memories.view_memory', memory_id=memory.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-start my-4">
+        <a href="{{ url_for('memories.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Memories
+        </a>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<!-- Include custom JavaScript file -->
+<script src="{{ url_for('static', filename='js/memory-map.js') }}"></script>
+
+<!-- Add MarkerClusterer library for handling many markers -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+
+<!-- Add heatmap visualization library -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=visualization&v=weekly"></script>
+
 <script>
-    // Initialize the map
-    function initMap() {
-        // Create a map centered on a default location (world view)
-        const map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 2,
-            center: { lat: 0, lng: 0 },
-            mapTypeId: "terrain",
-        });
-        
-        const bounds = new google.maps.LatLngBounds();
-        const infoWindow = new google.maps.InfoWindow();
-        const markers = [];
-        
-        // Add markers for each memory with coordinates
+    // Store memory data for use in JavaScript
+    const memoryData = [
         {% for memory in memories %}
             {% if memory.lat and memory.lng %}
-                const memoryLatLng = { lat: {{ memory.lat }}, lng: {{ memory.lng }} };
-                const marker = new google.maps.Marker({
-                    position: memoryLatLng,
-                    map: map,
+                {
+                    id: {{ memory.id }},
                     title: "{{ memory.title }}",
-                    animation: google.maps.Animation.DROP
-                });
-                
-                // Create content for info window
-                const contentString = `
-                    <div class="memory-info-window">
-                        <h4>{{ memory.title }}</h4>
-                        <p><strong>Location:</strong> {{ memory.location }}</p>
-                        <p><strong>Date:</strong> {{ memory.visit_date.strftime('%B %d, %Y') if memory.visit_date else 'Not specified' }}</p>
-                        {% if memory.description %}
-                        <p><strong>Description:</strong> {{ memory.description|truncate(100) }}</p>
-                        {% endif %}
-                        <a href="{{ url_for('memories.view_memory', memory_id=memory.id) }}" class="memory-details-link btn btn-sm btn-primary">View Details</a>
-                    </div>
-                `;
-                
-                // Add click event for marker
-                marker.addListener("click", () => {
-                    infoWindow.setContent(contentString);
-                    infoWindow.open(map, marker);
-                });
-                
-                markers.push(marker);
-                bounds.extend(memoryLatLng);
+                    location: "{{ memory.location }}",
+                    lat: {{ memory.lat }},
+                    lng: {{ memory.lng }},
+                    visit_date: "{{ memory.visit_date.strftime('%B %d, %Y') if memory.visit_date else '' }}",
+                    description: "{{ memory.description|replace('\n', ' ')|replace('"', '\\"') if memory.description else '' }}",
+                    {% if memory.photos and memory.photos[0] %}
+                        image_path: "{{ memory.photos[0].filename }}",
+                    {% else %}
+                        image_path: null,
+                    {% endif %}
+                    tags: [{% for tag in memory.tags %}"{{ tag.name }}"{% if not loop.last %},{% endif %}{% endfor %}],
+                    isRecent: {{ (memory.created_at > (now - timedelta(days=30)))|lower }}
+                }{% if not loop.last %},{% endif %}
             {% endif %}
         {% endfor %}
-        
-        // Adjust map bounds to fit all markers if there are any
-        if (markers.length > 0) {
-            map.fitBounds(bounds);
-            // If only one marker, zoom out a bit
-            if (markers.length === 1) {
-                google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
-                    map.setZoom(Math.min(10, map.getZoom()));
-                });
-            }
+    ];
+    
+    // Focus on a specific memory marker when clicked from the list
+    function focusMemory(memoryId) {
+        const marker = markers.find(m => m.memoryId === memoryId);
+        if (marker) {
+            // Center map on the marker
+            map.setCenter(marker.getPosition());
+            map.setZoom(14);
+            
+            // Trigger the marker click event
+            google.maps.event.trigger(marker, 'click');
+            
+            // Highlight in the list
+            highlightMemoryInList(memoryId);
         }
     }
+    
+    // Override the loadMemoryMarkers function from memory-map.js
+    function loadMemoryMarkers() {
+        // Create markers for each memory
+        memoryData.forEach(memory => {
+            const marker = createMemoryMarker(memory, memory.isRecent);
+            marker.memory = memory; // Store memory data with marker for filtering
+            markers.push(marker);
+        });
+        
+        // After all markers are added, check if there are any
+        if (markers.length > 0) {
+            // Fit map to show all markers
+            const bounds = new google.maps.LatLngBounds();
+            markers.forEach(marker => bounds.extend(marker.getPosition()));
+            map.fitBounds(bounds);
+            
+            // Create marker cluster if there are many markers
+            if (markers.length > 10) {
+                markerCluster = new MarkerClusterer(map, markers, {
+                    imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
+                    gridSize: 50,
+                    minimumClusterSize: 3,
+                    maxZoom: 15
+                });
+            }
+            
+            // Hide the "no memories" message
+            document.getElementById('no-memories').style.display = 'none';
+        } else {
+            // Show the "no memories" message
+            document.getElementById('no-memories').style.display = 'flex';
+        }
+        
+        // Update memory counter
+        document.getElementById('memory-count').textContent = markers.length;
+        
+        // Hide loader
+        hideLoader();
+    }
+    
+    // Add click events to tag pills
+    document.querySelectorAll('.tag-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            // Remove active class from all pills
+            document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
+            // Add active class to clicked pill
+            this.classList.add('active');
+            
+            // Get tag name
+            const tag = this.textContent === 'All' ? 'all' : this.textContent;
+            
+            // Filter markers
+            filterMarkersByTag(tag);
+        });
+    });
 </script>
-<script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+
+<!-- Error handling for Google Maps API -->
+<script>
+    window.onerror = function(msg, url, line) {
+        if (url.includes('maps.googleapis.com')) {
+            handleMapError();
+            return true; // Prevent default error handler
+        }
+    };
 </script>
 {% endblock %}

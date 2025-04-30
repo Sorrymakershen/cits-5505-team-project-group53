@@ -23,7 +23,7 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top navbar">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="fas fa-globe-americas me-2 text-primary"></i>Travel Platform
@@ -74,7 +74,7 @@
     </nav>
 
     <!-- Flash Messages -->
-    <div class="container mt-3">
+    <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -136,6 +136,7 @@
     <script src="{{ url_for('static', filename='js/validation.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/data-analysis.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>

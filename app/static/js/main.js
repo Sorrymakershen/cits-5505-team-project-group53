@@ -663,44 +663,12 @@ function initTextTruncation() {
 }
 
 /**
- * Initialize theme preferences
+ * Initialize theme preferences - Dark mode functionality removed
  */
 function initThemePreferences() {
-    // Check for saved preferences
-    const savedTheme = localStorage.getItem('theme-preference');
-    if (savedTheme) {
-        document.body.setAttribute('data-bs-theme', savedTheme);
-    }
-    
-    // Create theme toggle if it doesn't exist
-    if (!document.getElementById('theme-toggle')) {
-        const themeToggle = document.createElement('div');
-        themeToggle.id = 'theme-toggle';
-        themeToggle.className = 'position-fixed end-0 bottom-0 mb-5 me-4 d-flex flex-column gap-2';
-        themeToggle.style.zIndex = '1000';
-        
-        const darkModeBtn = document.createElement('button');
-        darkModeBtn.className = 'btn btn-sm btn-outline-secondary rounded-circle';
-        darkModeBtn.innerHTML = '<i class="fas fa-moon"></i>';
-        darkModeBtn.title = 'Toggle dark mode';
-        darkModeBtn.style.width = '40px';
-        darkModeBtn.style.height = '40px';
-        
-        darkModeBtn.addEventListener('click', function() {
-            const currentTheme = document.body.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            document.body.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme-preference', newTheme);
-            
-            darkModeBtn.innerHTML = newTheme === 'dark' 
-                ? '<i class="fas fa-sun"></i>' 
-                : '<i class="fas fa-moon"></i>';
-        });
-        
-        themeToggle.appendChild(darkModeBtn);
-        document.body.appendChild(themeToggle);
-    }
+    // All dark mode toggle functionality has been removed
+    // Setting default theme to light
+    document.body.setAttribute('data-bs-theme', 'light');
 }
 
 /**

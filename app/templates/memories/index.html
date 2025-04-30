@@ -87,6 +87,93 @@
         background-color: #0d6efd;
         border-color: #0d6efd;
     }
+    
+    /* Enhanced visual effects (NEW) */
+    .memory-card .card-body {
+        position: relative;
+        z-index: 2;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1));
+    }
+    
+    .img-container {
+        position: relative;
+    }
+    
+    .img-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.15));
+        z-index: 1;
+    }
+    
+    .memory-card:hover .img-container::after {
+        background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.25));
+    }
+    
+    /* Memory location marker style */
+    .location-text {
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .location-text:hover {
+        color: #0d6efd;
+    }
+    
+    .location-text::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background-color: #0d6efd;
+        transition: width 0.3s ease;
+    }
+    
+    .location-text:hover::after {
+        width: 100%;
+    }
+    
+    /* Empty state enhancement */
+    .alert-light.text-center {
+        background: radial-gradient(circle, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    /* Rating star animations */
+    .rating-stars i {
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+    
+    /* Button hover effects */
+    .btn-primary, .btn-outline-primary {
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .btn-primary::before, .btn-outline-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.1);
+        transition: all 0.3s ease;
+        z-index: -1;
+    }
+    
+    .btn-primary:hover::before, .btn-outline-primary:hover::before {
+        left: 0;
+    }
 </style>
 {% endblock %}
 
@@ -350,6 +437,91 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // NEW: Enhanced image loading animation
+    document.querySelectorAll('.card-img-top').forEach(img => {
+        if (img.complete) {
+            img.classList.add('loaded');
+        } else {
+            img.addEventListener('load', function() {
+                this.classList.add('loaded');
+            });
+        }
+    });
+    
+    // NEW: Smooth scroll to filter when clicking filter button
+    document.querySelector('button[type="submit"]').addEventListener('click', function(e) {
+        // Don't interfere with form submission, just add animation
+        setTimeout(() => {
+            window.scrollTo({
+                top: document.querySelector('#memories-container').offsetTop - 100,
+                behavior: 'smooth'
+            });
+        }, 10);
+    });
+    
+    // NEW: Add hover effects to memory cards
+    document.querySelectorAll('.memory-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.add('pulse');
+            });
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.remove('pulse');
+            });
+        });
+    });
+    
+    // NEW: Add keyboard accessibility
+    document.querySelectorAll('.memory-card').forEach(card => {
+        const viewBtn = card.querySelector('a.btn-primary');
+        const editBtn = card.querySelector('a.btn-outline-primary');
+        
+        if (viewBtn) {
+            viewBtn.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    window.location = this.href;
+                }
+            });
+        }
+        
+        if (editBtn) {
+            editBtn.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    window.location = this.href;
+                }
+            });
+        }
+    });
+    
+    // NEW: Add lazy load effect for images
+    document.addEventListener('scroll', function() {
+        document.querySelectorAll('.img-container').forEach(container => {
+            if (isElementInViewport(container)) {
+                const img = container.querySelector('img');
+                if (img && !img.classList.contains('loaded')) {
+                    img.classList.add('loading');
+                    setTimeout(() => {
+                        img.classList.add('loaded');
+                    }, 100);
+                }
+            }
+        });
+    });
+    
+    // Utility function to check if element is in viewport
+    function isElementInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
 });
 </script>
 {% endblock %}

@@ -15,7 +15,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-temporary-key')  # Use environment variable in production
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///travel_planner.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['WTF_CSRF_ENABLED'] = False  # 临时禁用 CSRF 保护以解决问题
+# CSRF protection is enabled to prevent cross-site request forgery attacks
+# This ensures that forms submitted to this application must include a valid CSRF token
+app.config['WTF_CSRF_ENABLED'] = True  # CSRF protection is essential for security
 
 # Initialize CSRF protection
 from app.csrf_config import configure_csrf

@@ -100,6 +100,9 @@
             <div class="card animate fade-in">
                 <div class="card-body p-4">
                     <form method="post" class="needs-validation" enctype="multipart/form-data" novalidate>
+                        <!-- Add CSRF token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
                         <div class="mb-4">
                             <label for="title" class="form-label">Title</label>
                             <input type="text" class="form-control" id="title" name="title" required>

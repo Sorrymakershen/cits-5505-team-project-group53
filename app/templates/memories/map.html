@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Memory Map - Travel Planning Platform{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #memory-map {
+        height: 600px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .memory-popup {
+        max-width: 300px;
+    }
+    .memory-popup img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    .memory-popup h5 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    .memory-popup p {
+        margin-bottom: 5px;
+        color: #666;
+    }
+    .no-coordinates {
+        padding: 20px;
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Your Memory Map</h2>
+                <a href="{{ url_for('memories.index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Memories
+                </a>
+            </div>            
+            <div id="memory-map" class="mb-4"></div>
+            
+            <!-- Alert shown if no memories have coordinates -->
+            <div id="no-coordinates-alert" class="no-coordinates alert alert-info mt-3" style="display: none;">
+                <i class="fas fa-map-marker-alt me-2"></i>
+                You don't have any memories with location data yet. 
+                Add location information to your memories to see them on this map.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the map
+        const map = L.map('memory-map').setView([0, 0], 2);
+        
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Create a bounds object
+        const bounds = L.latLngBounds();
+        let hasCoordinates = false;
+        
+        // Memory data from the server
+        const memoryData = [
+            {% for memory in memories %}
+                {% if memory.lat is not none and memory.lng is not none %}
+                {
+                    id: {{ memory.id }},
+                    title: "{{ memory.title|e }}",
+                    description: "{{ memory.description|e if memory.description else '' }}",
+                    date: "{{ memory.visit_date.strftime('%Y-%m-%d') if memory.visit_date else '' }}",
+                    image: "{% if memory.photos.first() %}{{ url_for('static', filename='uploads/' + memory.photos.first().filename) }}{% else %}''{% endif %}",
+                    lat: {{ memory.lat }},
+                    lng: {{ memory.lng }}
+                }{% if not loop.last %},{% endif %}
+                {% endif %}
+            {% endfor %}
+        ];
+        
+        // Add markers for memories with coordinates
+        if (memoryData.length > 0) {
+            hasCoordinates = true;
+            
+            memoryData.forEach(function(memory) {
+                const marker = L.marker([memory.lat, memory.lng]).addTo(map);
+                
+                // Create popup content
+                let popupContent = '<div class="memory-popup">';
+                if (memory.image && memory.image !== "''") {
+                    popupContent += '<img src="' + memory.image + '" alt="' + memory.title + '">';
+                }
+                popupContent += '<h5>' + memory.title + '</h5>';
+                if (memory.description) {
+                    popupContent += '<p>' + memory.description + '</p>';
+                }                if (memory.date) {
+                    popupContent += '<p><i class="far fa-calendar-alt me-2"></i>' + memory.date + '</p>';
+                }
+                popupContent += '<a href="/memories/' + memory.id + '" class="btn btn-sm btn-primary mt-2">View Details</a></div>';
+                
+                marker.bindPopup(popupContent);
+                bounds.extend([memory.lat, memory.lng]);
+            });
+            
+            // Fit the map to show all markers
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {
+                    padding: [50, 50]
+                });
+            }
+        } else {
+            // Display the alert for no coordinates
+            document.getElementById('no-coordinates-alert').style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

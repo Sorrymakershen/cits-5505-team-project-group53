@@ -67,7 +67,7 @@
             
             <div class="memory-metadata mb-4">
                 <div class="memory-metadata-item">
-                    <i class="fas fa-calendar-alt"></i> {{ memory.date.strftime('%B %d, %Y') }}
+                    <i class="fas fa-calendar-alt"></i> {{ memory.visit_date.strftime('%B %d, %Y') }}
                 </div>
                 {% if memory.location %}
                 <div class="memory-metadata-item">
@@ -130,7 +130,7 @@
             {% endif %}
             
             <div class="d-flex justify-content-between mt-4">
-                <a href="{{ url_for('memories.memories_index') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('memories.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Back to Memories
                 </a>
                 

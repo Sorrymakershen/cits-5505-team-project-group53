@@ -144,28 +144,6 @@
                     </div>
                 </div>
             </div>
-            <div class="card mt-4 animate fade-in" style="animation-delay: 0.3s;">
-                <div class="card-body">
-                    <h3 class="card-title mb-4">Map Preview</h3>
-                    {% set map_items = [] %}
-                    {% for item in items %}
-                        {% set _ = map_items.append({
-                            'id': item.id,
-                            'day': item.day,
-                            'time': item.time|string if item.time else '',
-                            'activity': item.activity,
-                            'location': item.location,
-                            'lat': item.lat,
-                            'lng': item.lng,
-                            'cost': item.cost|float if item.cost else 0,
-                            'notes': item.notes
-                        }) %}
-                    {% endfor %}
-                    <div id="planMap" class="map-container" data-items='{{ map_items | tojson }}' style="height: 300px;">
-                        <!-- Map will be inserted here by JavaScript -->
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -179,12 +157,8 @@
     const GET_ITINERARY_DATA_URL = container.dataset.getItineraryDataUrl;
     const EDIT_PLAN_URL = container.dataset.editPlanUrl;
     
-    // Initialize Leaflet map when the page loads
+    // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', function() {
-        if (document.getElementById('planMap')) {
-            initializePlanMap();
-        }
-        
         // setup activity form submission
         setupAddActivityForm();
         
@@ -198,7 +172,7 @@
         });
     });
     
-    // add markers to the map
+    // setup form handling
     function setupAddActivityForm() {
         const form = document.getElementById('addActivityForm');
         
@@ -243,7 +217,7 @@
                     // clear form fields
                     form.reset();
                     
-                    // update itinerary table and map
+                    // update itinerary table
                     refreshItineraryData();
                 } else {
                     throw new Error(data.message || 'Error adding activity');
@@ -273,14 +247,13 @@
         });
     }
     
-    // update map with new markers
+    // refresh itinerary data
     function refreshItineraryData() {
         fetch(GET_ITINERARY_DATA_URL)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     updateItineraryTable(data.itinerary_by_day);
-                    updateMapData(data.itinerary_items_json);
                 }
             })
             .catch(error => {
@@ -369,26 +342,6 @@
         
         // bonding delete buttons
         setupDeleteActivityButtons();
-    }
-    
-    // update map with new data
-    function updateMapData(itemsJson) {
-        // update map markers
-        if (window.planMap) {
-            // clear existing markers
-            if (window.planMapMarkers) {
-                window.planMapMarkers.forEach(marker => marker.remove());
-            }
-            window.planMapMarkers = [];
-            
-            // add new markers
-            addMarkersToMap(itemsJson);
-        } else {
-            // if map not initialized, set data attribute and initialize    
-            const mapContainer = document.getElementById('planMap');
-            mapContainer.setAttribute('data-items', JSON.stringify(itemsJson));
-            initializePlanMap();
-        }
     }
     
     // setup delete buttons

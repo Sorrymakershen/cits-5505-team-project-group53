@@ -203,5 +203,11 @@ def timeline():
 @login_required
 def map_view():
     """View memories on a map"""
+    # Get all memories for the current user
     memories = Memory.query.filter_by(user_id=current_user.id).all()
+    
+    # Log the number of memories found for debugging
+    current_app.logger.debug(f"Found {len(memories)} memories for map view")
+    current_app.logger.debug(f"Memories with coordinates: {sum(1 for m in memories if m.lat is not None and m.lng is not None)}")
+    
     return render_template('memories/map.html', memories=memories)

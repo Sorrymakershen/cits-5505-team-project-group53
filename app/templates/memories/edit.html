@@ -138,6 +138,9 @@
             <div class="card">
                 <div class="card-body p-4">
                     <form action="{{ url_for('memories.edit_memory', memory_id=memory.id) }}" method="post" enctype="multipart/form-data" id="memory-form">
+                        <!-- Add CSRF token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
                         <div class="mb-3">
                             <label for="title" class="form-label">Title</label>
                             <input type="text" class="form-control" id="title" name="title" value="{{ memory.title }}" required>

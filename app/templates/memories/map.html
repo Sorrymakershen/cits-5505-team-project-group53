@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Memory Map{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    .memory-info-window {
+        max-width: 300px;
+    }
+    .memory-info-window h4 {
+        margin-top: 0;
+        margin-bottom: 5px;
+    }
+    .memory-info-window p {
+        margin-bottom: 5px;
+    }
+    .memory-details-link {
+        display: inline-block;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Your Memory Map</h1>
+    <p class="text-muted">View all your travel memories on the map</p>
+    
+    <div id="map"></div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between mb-4">
+                <a href="{{ url_for('memories.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Memories
+                </a>
+                <a href="{{ url_for('memories.create_memory') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Memory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Initialize the map
+    function initMap() {
+        // Create a map centered on a default location (world view)
+        const map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 2,
+            center: { lat: 0, lng: 0 },
+            mapTypeId: "terrain",
+        });
+        
+        const bounds = new google.maps.LatLngBounds();
+        const infoWindow = new google.maps.InfoWindow();
+        const markers = [];
+        
+        // Add markers for each memory with coordinates
+        {% for memory in memories %}
+            {% if memory.lat and memory.lng %}
+                const memoryLatLng = { lat: {{ memory.lat }}, lng: {{ memory.lng }} };
+                const marker = new google.maps.Marker({
+                    position: memoryLatLng,
+                    map: map,
+                    title: "{{ memory.title }}",
+                    animation: google.maps.Animation.DROP
+                });
+                
+                // Create content for info window
+                const contentString = `
+                    <div class="memory-info-window">
+                        <h4>{{ memory.title }}</h4>
+                        <p><strong>Location:</strong> {{ memory.location }}</p>
+                        <p><strong>Date:</strong> {{ memory.visit_date.strftime('%B %d, %Y') if memory.visit_date else 'Not specified' }}</p>
+                        {% if memory.description %}
+                        <p><strong>Description:</strong> {{ memory.description|truncate(100) }}</p>
+                        {% endif %}
+                        <a href="{{ url_for('memories.view_memory', memory_id=memory.id) }}" class="memory-details-link btn btn-sm btn-primary">View Details</a>
+                    </div>
+                `;
+                
+                // Add click event for marker
+                marker.addListener("click", () => {
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+                
+                markers.push(marker);
+                bounds.extend(memoryLatLng);
+            {% endif %}
+        {% endfor %}
+        
+        // Adjust map bounds to fit all markers if there are any
+        if (markers.length > 0) {
+            map.fitBounds(bounds);
+            // If only one marker, zoom out a bit
+            if (markers.length === 1) {
+                google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+                    map.setZoom(Math.min(10, map.getZoom()));
+                });
+            }
+        }
+    }
+</script>
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+</script>
+{% endblock %}

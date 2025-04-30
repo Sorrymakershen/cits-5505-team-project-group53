@@ -2,6 +2,94 @@
 
 {% block title %}Travel Memories - Travel Planning Platform{% endblock %}
 
+{% block head %}
+{{ super() }}
+<style>
+    /* Memory card enhancements */
+    .memory-card {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .memory-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+    
+    .card-img-top {
+        transition: all 0.5s ease;
+    }
+    
+    .memory-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+    
+    /* Tag styling */
+    .tag {
+        display: inline-block;
+        padding: 3px 10px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        background-color: #e9ecef;
+        color: #495057;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    
+    .tag:hover {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .tag.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    /* Animations */
+    .animate {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.6s ease forwards;
+    }
+    
+    @keyframes fadeIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Filter enhancements */
+    .filter-card {
+        border-left: 4px solid #0d6efd;
+    }
+    
+    /* Pagination improvements */
+    .pagination .page-link {
+        border-radius: 50%;
+        margin: 0 3px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="py-5">
     <div class="container">
@@ -26,16 +114,22 @@
         </div>
         
         <!-- Filters -->
-        <div class="card mb-4 animate fade-in">
+        <div class="card mb-4 animate fade-in filter-card">
             <div class="card-body p-3">
-                <form method="get" class="row g-3">
+                <form method="get" class="row g-3" id="memory-filter-form">
                     <div class="col-md-4">
                         <label for="location" class="form-label small">Location</label>
-                        <input type="text" class="form-control" id="location" name="location" value="{{ request.args.get('location', '') }}">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                            <input type="text" class="form-control" id="location" name="location" value="{{ request.args.get('location', '') }}" placeholder="Enter location...">
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label for="tag" class="form-label small">Tag</label>
-                        <input type="text" class="form-control" id="tag" name="tag" value="{{ request.args.get('tag', '') }}">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                            <input type="text" class="form-control" id="tag" name="tag" value="{{ request.args.get('tag', '') }}" placeholder="Enter tag...">
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label for="sort" class="form-label small">Sort By</label>
@@ -43,22 +137,55 @@
                             <option value="date-desc" {% if request.args.get('sort') == 'date-desc' %}selected{% endif %}>Newest First</option>
                             <option value="date-asc" {% if request.args.get('sort') == 'date-asc' %}selected{% endif %}>Oldest First</option>
                             <option value="rating-desc" {% if request.args.get('sort') == 'rating-desc' %}selected{% endif %}>Highest Rating</option>
+                            <option value="location" {% if request.args.get('sort') == 'location' %}selected{% endif %}>Location</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-2"></i> Filter
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
         
-        <div class="row g-4">
+        <!-- Active filters display -->
+        <div id="active-filters" class="mb-3 animate fade-in" style="animation-delay: 0.2s;">
+            {% if request.args.get('location') or request.args.get('tag') %}
+                <div class="d-flex align-items-center">
+                    <span class="me-2 text-muted"><i class="fas fa-filter me-1"></i> Active filters:</span>
+                    {% if request.args.get('location') %}
+                        <span class="tag active me-2">
+                            Location: {{ request.args.get('location') }}
+                            <a href="{{ url_for('memories.index', tag=request.args.get('tag', ''), sort=request.args.get('sort', 'date-desc')) }}" class="text-white ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                    {% endif %}
+                    {% if request.args.get('tag') %}
+                        <span class="tag active me-2">
+                            Tag: {{ request.args.get('tag') }}
+                            <a href="{{ url_for('memories.index', location=request.args.get('location', ''), sort=request.args.get('sort', 'date-desc')) }}" class="text-white ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                    {% endif %}
+                    <a href="{{ url_for('memories.index') }}" class="btn btn-sm btn-light ms-auto">
+                        <i class="fas fa-undo me-1"></i> Reset All
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="row g-4" id="memories-container">
             {% if memories %}
                 {% for memory in memories %}
                     <div class="col-md-6 col-lg-4 animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
-                        <div class="card h-100">
+                        <div class="card h-100 memory-card">
                             {% if memory.photos.first() %}
-                                <img src="{{ url_for('static', filename='uploads/' + memory.photos.first().filename) }}" class="card-img-top" alt="{{ memory.title }}" style="height: 200px; object-fit: cover;">
+                                <div class="img-container" style="height: 200px; overflow: hidden;">
+                                    <img src="{{ url_for('static', filename='uploads/' + memory.photos.first().filename) }}" class="card-img-top" alt="{{ memory.title }}" style="height: 200px; object-fit: cover;">
+                                </div>
                             {% else %}
                                 <div class="card-img-top bg-light text-center py-5" style="height: 200px;">
                                     <i class="fas fa-camera fa-3x text-muted"></i>
@@ -73,7 +200,7 @@
                                 </div>
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="fas fa-map-marker-alt text-danger me-2"></i>
-                                    <span>{{ memory.location or 'No location specified' }}</span>
+                                    <span class="location-text">{{ memory.location or 'No location specified' }}</span>
                                 </div>
                                 <div class="d-flex align-items-center mb-3">
                                     <i class="fas fa-calendar text-primary me-2"></i>
@@ -81,7 +208,7 @@
                                 </div>
                                 
                                 <!-- Rating Stars -->
-                                <div class="mb-3">
+                                <div class="mb-3 rating-stars">
                                     {% for i in range(5) %}
                                         {% if i < memory.emotional_rating %}
                                             <i class="fas fa-star text-warning"></i>
@@ -92,9 +219,9 @@
                                 </div>
                                 
                                 <!-- Tags -->
-                                <div class="mb-3">
+                                <div class="mb-3 tags-container">
                                     {% for tag in memory.tags %}
-                                        <span class="tag">{{ tag.name }}</span>
+                                        <span class="tag memory-tag" data-tag="{{ tag.name }}">{{ tag.name }}</span>
                                     {% endfor %}
                                 </div>
                                 
@@ -162,4 +289,67 @@
         {% endif %}
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable interactive filtering by tags
+    document.querySelectorAll('.memory-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            const tagValue = this.getAttribute('data-tag');
+            document.getElementById('tag').value = tagValue;
+            document.getElementById('memory-filter-form').submit();
+        });
+    });
+    
+    // Animated entry for memory cards when scrolling
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+    
+    document.querySelectorAll('.animate').forEach(element => {
+        observer.observe(element);
+    });
+    
+    // Interactive location filtering
+    document.querySelectorAll('.location-text').forEach(location => {
+        location.addEventListener('click', function() {
+            if (this.textContent !== 'No location specified') {
+                document.getElementById('location').value = this.textContent;
+                document.getElementById('memory-filter-form').submit();
+            }
+        });
+    });
+    
+    // Enhanced rating stars interaction
+    document.querySelectorAll('.rating-stars').forEach(ratingContainer => {
+        const stars = ratingContainer.querySelectorAll('i');
+        
+        stars.forEach((star, index) => {
+            star.addEventListener('mouseenter', function() {
+                for (let i = 0; i <= index; i++) {
+                    stars[i].classList.remove('far');
+                    stars[i].classList.add('fas');
+                    stars[i].style.transform = 'scale(1.2)';
+                }
+            });
+            
+            star.addEventListener('mouseleave', function() {
+                stars.forEach((s, i) => {
+                    s.style.transform = 'scale(1)';
+                    if (!s.classList.contains('text-warning') || s.classList.contains('far')) {
+                        // Reset to original state if needed
+                    }
+                });
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

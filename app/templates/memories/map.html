@@ -2,6 +2,12 @@
 
 {% block title %}Memory Map{% endblock %}
 
+{% block head %}
+{{ super() }}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+{% endblock %}
+
 {% block styles %}
 {{ super() }}
 <style>
@@ -14,7 +20,7 @@
         margin-bottom: 2rem;
     }
     
-    #map {
+    #memory-map {
         height: 600px;
         width: 100%;
         border-radius: 8px;
@@ -26,7 +32,7 @@
         position: absolute;
         top: 20px;
         right: 30px;
-        z-index: 10;
+        z-index: 999;
         display: flex;
         gap: 10px;
     }
@@ -127,7 +133,7 @@
         position: absolute;
         bottom: 20px;
         left: 20px;
-        z-index: 10;
+        z-index: 999;
         background-color: white;
         padding: 10px;
         border-radius: 5px;
@@ -171,35 +177,6 @@
         color: white;
     }
     
-    .memory-card {
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        transition: all 0.3s ease;
-        overflow: hidden;
-    }
-    
-    .memory-card:hover {
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
-    }
-    
-    .memory-card-header {
-        padding: 15px;
-        border-bottom: 1px solid #e9ecef;
-        background-color: #f8f9fa;
-    }
-    
-    .memory-card-body {
-        padding: 15px;
-    }
-    
-    .memory-card-img {
-        width: 100%;
-        height: 150px;
-        object-fit: cover;
-    }
-    
     .memory-list-item {
         padding: 10px 15px;
         border-left: 3px solid transparent;
@@ -217,13 +194,55 @@
         border-left-color: #007bff;
     }
     
+    .marker-recent {
+        color: #007bff;
+    }
+    
+    .marker-default {
+        color: #dc3545;
+    }
+    
+    .custom-marker-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .no-memories-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        z-index: 998;
+        border-radius: 8px;
+    }
+    
+    .no-memories-message {
+        text-align: center;
+        max-width: 80%;
+    }
+    
+    .no-memories-message h3 {
+        color: #495057;
+        margin-bottom: 1rem;
+    }
+    
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
     
     @media (max-width: 768px) {
-        #map {
+        #memory-map {
             height: 400px;
         }
         
@@ -241,39 +260,6 @@
             margin-top: 15px;
             align-self: flex-end;
         }
-    }
-    
-    .no-memories-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background-color: rgba(255, 255, 255, 0.9);
-        z-index: 5;
-        border-radius: 8px;
-    }
-    
-    .no-memories-message {
-        text-align: center;
-        max-width: 80%;
-    }
-    
-    .no-memories-message h3 {
-        color: #495057;
-        margin-bottom: 1rem;
-    }
-    
-    .marker-recent {
-        color: #007bff;
-    }
-    
-    .marker-default {
-        color: #dc3545;
     }
 </style>
 {% endblock %}
@@ -295,13 +281,13 @@
     <div class="filter-bar d-flex flex-wrap align-items-center justify-content-between">
         <div>
             <span class="filter-title">Filter by:</span>
-            <span class="tag-pill active" onclick="filterMarkersByTag('all')">All</span>
+            <span class="tag-pill active" data-tag="all">All</span>
             {% set unique_tags = [] %}
             {% for memory in memories %}
                 {% for tag in memory.tags %}
                     {% if tag.name not in unique_tags %}
                         {% set _ = unique_tags.append(tag.name) %}
-                        <span class="tag-pill" onclick="filterMarkersByTag('{{ tag.name }}')">{{ tag.name }}</span>
+                        <span class="tag-pill" data-tag="{{ tag.name }}">{{ tag.name }}</span>
                     {% endif %}
                 {% endfor %}
             {% endfor %}
@@ -326,7 +312,7 @@
             </div>
         </div>
         
-        <div id="map"></div>
+        <div id="memory-map"></div>
         
         <div class="map-controls">
             <button id="zoomWorld" class="map-control-btn" title="View World Map">
@@ -335,21 +321,15 @@
             <button id="toggleTerrain" class="map-control-btn" title="Toggle Terrain View">
                 <i class="fas fa-mountain"></i>
             </button>
-            <button id="toggleHeatmap" class="map-control-btn" title="Show Heatmap">
-                <i class="fas fa-fire"></i>
-            </button>
-            <button id="showJourney" class="map-control-btn" title="Show Journey Path">
-                <i class="fas fa-route"></i>
-            </button>
         </div>
         
         <div class="map-legend">
             <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-map-marker-alt marker-default mr-2"></i>
+                <i class="fas fa-map-marker-alt me-2 marker-default"></i>
                 <span>Regular Memory</span>
             </div>
             <div class="d-flex align-items-center">
-                <i class="fas fa-map-marker-alt marker-recent mr-2"></i>
+                <i class="fas fa-map-marker-alt me-2 marker-recent"></i>
                 <span>Recent Memory (last 30 days)</span>
             </div>
         </div>
@@ -362,13 +342,13 @@
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         {% for memory in memories %}
-                            {% if memory.lat and memory.lng %}
-                                <div class="memory-list-item" data-id="{{ memory.id }}" onclick="focusMemory({{ memory.id }})">
+                            {% if memory.lat is not none and memory.lng is not none %}
+                                <div class="memory-list-item" data-id="{{ memory.id }}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <h5 class="mb-1">{{ memory.title }}</h5>
                                             <p class="mb-1 text-muted">
-                                                <i class="fas fa-map-marker-alt"></i> {{ memory.location }}
+                                                <i class="fas fa-map-marker-alt"></i> {{ memory.location or 'No location specified' }}
                                                 {% if memory.visit_date %}
                                                     &bull; <i class="far fa-calendar-alt"></i> {{ memory.visit_date.strftime('%B %d, %Y') }}
                                                 {% endif %}
@@ -395,122 +375,331 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
-<!-- Include custom JavaScript file -->
-<script src="{{ url_for('static', filename='js/memory-map.js') }}"></script>
-
-<!-- Add MarkerClusterer library for handling many markers -->
-<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
-
-<!-- Add heatmap visualization library -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=visualization&v=weekly"></script>
-
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-    // Store memory data for use in JavaScript
-    const memoryData = [
-        {% for memory in memories %}
-            {% if memory.lat and memory.lng %}
-                {
-                    id: {{ memory.id }},
-                    title: "{{ memory.title }}",
-                    location: "{{ memory.location }}",
-                    lat: {{ memory.lat }},
-                    lng: {{ memory.lng }},
-                    visit_date: "{{ memory.visit_date.strftime('%B %d, %Y') if memory.visit_date else '' }}",
-                    description: "{{ memory.description|replace('\n', ' ')|replace('"', '\\"') if memory.description else '' }}",
-                    {% if memory.photos and memory.photos[0] %}
-                        image_path: "{{ memory.photos[0].filename }}",
-                    {% else %}
-                        image_path: null,
-                    {% endif %}
-                    tags: [{% for tag in memory.tags %}"{{ tag.name }}"{% if not loop.last %},{% endif %}{% endfor %}],
-                    isRecent: {{ (memory.created_at > (now - timedelta(days=30)))|lower }}
-                }{% if not loop.last %},{% endif %}
-            {% endif %}
-        {% endfor %}
-    ];
-    
-    // Focus on a specific memory marker when clicked from the list
-    function focusMemory(memoryId) {
-        const marker = markers.find(m => m.memoryId === memoryId);
-        if (marker) {
-            // Center map on the marker
-            map.setCenter(marker.getPosition());
-            map.setZoom(14);
-            
-            // Trigger the marker click event
-            google.maps.event.trigger(marker, 'click');
-            
-            // Highlight in the list
-            highlightMemoryInList(memoryId);
-        }
-    }
-    
-    // Override the loadMemoryMarkers function from memory-map.js
-    function loadMemoryMarkers() {
-        // Create markers for each memory
-        memoryData.forEach(memory => {
-            const marker = createMemoryMarker(memory, memory.isRecent);
-            marker.memory = memory; // Store memory data with marker for filtering
-            markers.push(marker);
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Debug to see if script is loading
+        console.log('Memory map standalone script loaded');
         
-        // After all markers are added, check if there are any
-        if (markers.length > 0) {
-            // Fit map to show all markers
-            const bounds = new google.maps.LatLngBounds();
-            markers.forEach(marker => bounds.extend(marker.getPosition()));
-            map.fitBounds(bounds);
-            
-            // Create marker cluster if there are many markers
-            if (markers.length > 10) {
-                markerCluster = new MarkerClusterer(map, markers, {
-                    imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
-                    gridSize: 50,
-                    minimumClusterSize: 3,
-                    maxZoom: 15
+        // Show loading indicator
+        const loader = document.getElementById('loader');
+        const noMemoriesOverlay = document.getElementById('no-memories');
+        const memoryCountElement = document.getElementById('memory-count');
+        
+        function showLoader() {
+            if (loader) loader.style.display = 'flex';
+        }
+        
+        function hideLoader() {
+            if (loader) loader.style.display = 'none';
+        }
+        
+        showLoader();
+        
+        // Initialize memory data array properly with JSON safe formatting
+        const memoryData = JSON.parse('{{ memories_json|safe }}');
+        
+        console.log('Memory data loaded:', memoryData.length, 'locations');
+        
+        // Initialize map and variables
+        let map;
+        let markers = [];
+        let markersByTag = {};
+        
+        // Initialize Leaflet Map
+        function initMap() {
+            try {
+                console.log('Initializing map...');
+                
+                // Create map
+                map = L.map('memory-map', {
+                    center: [20, 0],
+                    zoom: 2,
+                    minZoom: 2,
+                    maxZoom: 18
                 });
+                
+                // Add tile layer (OpenStreetMap)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                // Create markers for each memory
+                createMemoryMarkers();
+                
+                // Set up map controls
+                setupMapControls();
+                
+                // Add event listeners to tag pills
+                setupTagFiltering();
+                
+                // Add event listeners to memory list items
+                setupMemoryListInteractions();
+                
+                // Hide loader when map is loaded
+                map.whenReady(() => {
+                    setTimeout(() => {
+                        hideLoader();
+                    }, 500);
+                });
+            } catch (error) {
+                console.error('Map initialization error:', error);
+                hideLoader();
+                document.getElementById('memory-map').innerHTML = 
+                    '<div class="alert alert-danger m-3">Error loading map. Please refresh the page and try again.</div>';
+            }
+        }
+        
+        // Create markers for all memories
+        function createMemoryMarkers() {
+            // Check if we have memories with coordinates
+            if (memoryData.length === 0) {
+                if (noMemoriesOverlay) noMemoriesOverlay.style.display = 'flex';
+                if (memoryCountElement) memoryCountElement.textContent = '0';
+                return;
             }
             
             // Hide the "no memories" message
-            document.getElementById('no-memories').style.display = 'none';
-        } else {
-            // Show the "no memories" message
-            document.getElementById('no-memories').style.display = 'flex';
+            if (noMemoriesOverlay) noMemoriesOverlay.style.display = 'none';
+            
+            // Bounds to fit all markers
+            const bounds = L.latLngBounds();
+            
+            // Create a marker for each memory
+            memoryData.forEach(memory => {
+                try {
+                    console.log(`Creating marker for ${memory.title} at [${memory.lat}, ${memory.lng}]`);
+                    
+                    // Create marker icon
+                    const icon = L.divIcon({
+                        className: 'custom-marker-icon',
+                        html: `<div style="background-color: ${memory.isRecent ? '#007bff' : '#dc3545'}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                                <i class="fas fa-map-marker-alt" style="color: white;"></i>
+                              </div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -30]
+                    });
+                    
+                    // Create marker
+                    const marker = L.marker([memory.lat, memory.lng], {
+                        icon: icon,
+                        title: memory.title,
+                        memoryId: memory.id
+                    });
+                    
+                    // Create popup content
+                    let popupContent = `
+                        <div class="memory-info-window">
+                            <h4>${memory.title}</h4>
+                            <p><i class="fas fa-map-marker-alt"></i> <strong>${memory.location}</strong></p>
+                            <p><i class="far fa-calendar-alt"></i> ${memory.visit_date || 'Date not specified'}</p>
+                    `;
+                    
+                    if (memory.description) {
+                        popupContent += `<p><i class="fas fa-quote-left"></i> ${memory.description.length > 100 ? memory.description.substring(0, 97) + '...' : memory.description}</p>`;
+                    }
+                    
+                    if (memory.image_path) {
+                        popupContent += `<img src="${memory.image_path}" alt="${memory.title}" class="memory-thumbnail" onerror="this.onerror=null; this.src='/static/img/plane.jpg'; this.style.opacity=0.7;">`;
+                    }
+                    
+                    popupContent += `
+                            <a href="/memories/${memory.id}" class="memory-details-link btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        </div>
+                    `;
+                    
+                    // Add popup to marker
+                    marker.bindPopup(popupContent);
+                    
+                    // Store memory data with marker for filtering
+                    marker.memory = memory;
+                    
+                    // Add click event to highlight item in list
+                    marker.on('click', function() {
+                        highlightMemoryInList(memory.id);
+                    });
+                    
+                    // Add marker to map
+                    marker.addTo(map);
+                    
+                    // Add to markers array
+                    markers.push(marker);
+                    
+                    // Extend bounds
+                    bounds.extend([memory.lat, memory.lng]);
+                    
+                    // Organize markers by tags for filtering
+                    if (memory.tags && memory.tags.length > 0) {
+                        memory.tags.forEach(tag => {
+                            if (!markersByTag[tag]) markersByTag[tag] = [];
+                            markersByTag[tag].push(marker);
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error creating marker:', err, memory);
+                }
+            });
+            
+            // Update memory counter
+            if (memoryCountElement) memoryCountElement.textContent = markers.length.toString();
+            
+            // Fit map to show all markers
+            if (markers.length > 0) {
+                map.fitBounds(bounds, {
+                    padding: [50, 50],
+                    maxZoom: 12
+                });
+            }
         }
         
-        // Update memory counter
-        document.getElementById('memory-count').textContent = markers.length;
+        // Set up map controls
+        function setupMapControls() {
+            // World view button
+            const zoomWorldBtn = document.getElementById('zoomWorld');
+            if (zoomWorldBtn) {
+                zoomWorldBtn.addEventListener('click', function() {
+                    map.setView([20, 0], 2);
+                });
+            }
+            
+            // Toggle terrain button
+            const toggleTerrainBtn = document.getElementById('toggleTerrain');
+            if (toggleTerrainBtn) {
+                let terrainMode = false;
+                toggleTerrainBtn.addEventListener('click', function() {
+                    // Remove current tile layers
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.TileLayer) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    if (terrainMode) {
+                        // Switch to normal map
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            maxZoom: 19
+                        }).addTo(map);
+                        this.querySelector('i').className = 'fas fa-mountain';
+                        this.title = 'Switch to Terrain View';
+                    } else {
+                        // Switch to terrain map
+                        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors',
+                            maxZoom: 17
+                        }).addTo(map);
+                        this.querySelector('i').className = 'fas fa-map';
+                        this.title = 'Switch to Street View';
+                    }
+                    
+                    terrainMode = !terrainMode;
+                });
+            }
+        }
         
-        // Hide loader
-        hideLoader();
-    }
-    
-    // Add click events to tag pills
-    document.querySelectorAll('.tag-pill').forEach(pill => {
-        pill.addEventListener('click', function() {
-            // Remove active class from all pills
-            document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
-            // Add active class to clicked pill
-            this.classList.add('active');
+        // Set up tag filtering
+        function setupTagFiltering() {
+            const tagPills = document.querySelectorAll('.tag-pill');
+            tagPills.forEach(pill => {
+                pill.addEventListener('click', function() {
+                    // Update active state
+                    tagPills.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Get selected tag
+                    const tag = this.getAttribute('data-tag');
+                    
+                    // Filter markers
+                    filterMarkersByTag(tag);
+                });
+            });
+        }
+        
+        // Filter markers by tag
+        function filterMarkersByTag(tag) {
+            if (tag === 'all') {
+                // Show all markers
+                markers.forEach(marker => {
+                    if (!map.hasLayer(marker)) {
+                        marker.addTo(map);
+                    }
+                });
+            } else {
+                // First, remove all markers from map
+                markers.forEach(marker => {
+                    map.removeLayer(marker);
+                });
+                
+                // Then add only markers with the selected tag
+                markers.forEach(marker => {
+                    if (marker.memory && marker.memory.tags && marker.memory.tags.includes(tag)) {
+                        marker.addTo(map);
+                    }
+                });
+            }
             
-            // Get tag name
-            const tag = this.textContent === 'All' ? 'all' : this.textContent;
+            // Update visible count
+            const visibleMarkers = markers.filter(marker => map.hasLayer(marker));
+            if (memoryCountElement) memoryCountElement.textContent = visibleMarkers.length.toString();
             
-            // Filter markers
-            filterMarkersByTag(tag);
-        });
+            // If there are visible markers, adjust map view
+            if (visibleMarkers.length > 0) {
+                const bounds = L.latLngBounds(visibleMarkers.map(marker => marker.getLatLng()));
+                map.fitBounds(bounds, {
+                    padding: [50, 50],
+                    maxZoom: 12
+                });
+            }
+        }
+        
+        // Set up interactions with memory list
+        function setupMemoryListInteractions() {
+            const listItems = document.querySelectorAll('.memory-list-item');
+            listItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const memoryId = parseInt(this.getAttribute('data-id'));
+                    focusOnMemory(memoryId);
+                });
+            });
+        }
+        
+        // Focus on a specific memory
+        function focusOnMemory(memoryId) {
+            const marker = markers.find(m => m.options.memoryId === memoryId);
+            if (marker) {
+                // Center map on marker
+                map.setView(marker.getLatLng(), 14);
+                
+                // Open popup
+                marker.openPopup();
+                
+                // Highlight list item
+                highlightMemoryInList(memoryId);
+            }
+        }
+        
+        // Highlight memory in list
+        function highlightMemoryInList(memoryId) {
+            const listItems = document.querySelectorAll('.memory-list-item');
+            listItems.forEach(item => {
+                item.classList.remove('highlighted');
+            });
+            
+            const selectedItem = document.querySelector(`.memory-list-item[data-id="${memoryId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('highlighted');
+                selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        
+        // Initialize the map
+        initMap();
     });
-</script>
-
-<!-- Error handling for Google Maps API -->
-<script>
-    window.onerror = function(msg, url, line) {
-        if (url.includes('maps.googleapis.com')) {
-            handleMapError();
-            return true; // Prevent default error handler
-        }
-    };
 </script>
 {% endblock %}

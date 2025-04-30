@@ -12,8 +12,17 @@ memories_bp = Blueprint('memories', __name__, url_prefix='/memories')
 @login_required
 def index():
     """Memories main page showing user's travel memories"""
+    from datetime import datetime, timedelta
+    
     memories = Memory.query.filter_by(user_id=current_user.id).order_by(Memory.visit_date.desc()).all()
-    return render_template('memories/index.html', memories=memories)
+    
+    # Add current time for marking recent memories
+    now = datetime.now()
+    
+    return render_template('memories/index.html', 
+                          memories=memories, 
+                          now=now,
+                          timedelta=timedelta)
 
 @memories_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -203,5 +212,48 @@ def timeline():
 @login_required
 def map_view():
     """View memories on a map"""
+    from datetime import datetime, timedelta
+    import json
+    
+    # Get all memories with location data for the current user
     memories = Memory.query.filter_by(user_id=current_user.id).all()
-    return render_template('memories/map.html', memories=memories)
+    
+    # Prepare memories with location data for the map
+    map_data = []
+    now = datetime.now()
+    thirty_days_ago = now - timedelta(days=30)
+    
+    for memory in memories:
+        if memory.lat is not None and memory.lng is not None:
+            # Prepare tags as list of strings
+            tags = [tag.name for tag in memory.tags]
+            
+            # Get the first photo or None
+            image_path = None
+            if memory.photos and len(memory.photos) > 0:
+                image_path = url_for('static', filename=f'uploads/{memory.photos[0].filename}')
+            
+            # Format the visit date
+            visit_date_formatted = memory.visit_date.strftime('%B %d, %Y') if memory.visit_date else None
+            
+            # Check if memory is recent (within last 30 days)
+            is_recent = memory.visit_date and memory.visit_date >= thirty_days_ago
+            
+            # Create map data object
+            map_data.append({
+                'id': memory.id,
+                'title': memory.title,
+                'location': memory.location,
+                'lat': float(memory.lat),
+                'lng': float(memory.lng),
+                'description': memory.description[:150] + '...' if memory.description and len(memory.description) > 150 else memory.description,
+                'visit_date': visit_date_formatted,
+                'image_path': image_path,
+                'tags': tags,
+                'isRecent': is_recent
+            })
+    
+    # Convert to JSON for template
+    memories_json = json.dumps(map_data)
+    
+    return render_template('memories/map.html', memories=memories, memories_json=memories_json)

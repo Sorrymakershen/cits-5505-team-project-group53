@@ -1,295 +1,217 @@
 {% extends 'base.html' %}
 
-{% block title %}Add Travel Memory - Travel Planning Platform{% endblock %}
+{% block title %}Create Memory - Travel Planning Platform{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
-    #drop-area {
-        border: 2px dashed var(--primary-color);
+    #map-picker {
+        height: 300px;
+        width: 100%;
         border-radius: var(--border-radius);
-        padding: 2rem;
-        text-align: center;
-        transition: all var(--transition-speed);
-    }
-    #drop-area.highlight {
-        background-color: rgba(66, 133, 244, 0.1);
-        border-color: var(--primary-color);
-    }
-    .rating-container {
-        display: flex;
-        flex-direction: row-reverse;
-        justify-content: flex-end;
-    }
-    .rating-container input {
-        display: none;
-    }
-    .rating-container label {
-        color: #ddd;
-        font-size: 1.5rem;
-        padding: 0 0.1rem;
-        cursor: pointer;
-        transition: all var(--transition-speed);
-    }
-    .rating-container label:hover,
-    .rating-container label:hover ~ label,
-    .rating-container input:checked ~ label {
-        color: var(--accent-color);
-    }
-    .tag-input-container {
-        display: flex;
-        flex-wrap: wrap;
+        margin-bottom: 1rem;
         border: 1px solid #ced4da;
-        border-radius: var(--border-radius);
-        padding: 0.375rem 0.75rem;
-        min-height: 38px;
-        align-items: center;
     }
-    .tag-input-container:focus-within {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.25rem rgba(66, 133, 244, 0.25);
-    }
-    .tag {
-        margin-right: 5px;
-        margin-bottom: 5px;
-        position: relative;
-    }
-    .tag i {
-        cursor: pointer;
-        opacity: 0;
-        transition: all var(--transition-speed);
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: var(--danger-color);
-        color: white;
-        border-radius: 50%;
-        width: 16px;
-        height: 16px;
-        font-size: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .tag:hover i {
-        opacity: 1;
-    }
-    #actual-tag-input {
-        border: none;
-        outline: none;
-        flex-grow: 1;
-        min-width: 60px;
+    .location-picker-help {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <div class="row mb-4 align-items-center">
-        <div class="col">
-            <div class="d-flex align-items-center mb-2">
-                <a href="{{ url_for('memories.index') }}" class="text-decoration-none me-3">
-                    <i class="fas fa-arrow-left"></i> Back to Memories
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h1 class="h2 mb-0">Create New Memory</h1>
+                <a href="{{ url_for('memories.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Memories
                 </a>
             </div>
-            <h1>Add New Memory</h1>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card animate fade-in">
-                <div class="card-body p-4">
-                    <form method="post" class="needs-validation" enctype="multipart/form-data" novalidate>
-                        <div class="mb-4">
-                            <label for="title" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="title" name="title" required>
-                            <div class="invalid-feedback">Please give your memory a title.</div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" id="location" name="location">
-                        </div>
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="lat" class="form-label">Latitude (optional)</label>
-                                <input type="number" step="any" class="form-control" id="lat" name="lat">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="lng" class="form-label">Longitude (optional)</label>
-                                <input type="number" step="any" class="form-control" id="lng" name="lng">
-                            </div>
-                            <div class="col-12 mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="get-current-location">
-                                    <i class="fas fa-map-marker-alt me-1"></i> Use Current Location
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="visit_date" class="form-label">Date of Visit</label>
-                            <input type="date" class="form-control" id="visit_date" name="visit_date">
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">Emotional Rating</label>
-                            <div class="rating-container">
-                                <input type="radio" name="emotional_rating" id="star5" value="5" required>
-                                <label for="star5"><i class="fas fa-star"></i></label>
-                                <input type="radio" name="emotional_rating" id="star4" value="4">
-                                <label for="star4"><i class="fas fa-star"></i></label>
-                                <input type="radio" name="emotional_rating" id="star3" value="3" checked>
-                                <label for="star3"><i class="fas fa-star"></i></label>
-                                <input type="radio" name="emotional_rating" id="star2" value="2">
-                                <label for="star2"><i class="fas fa-star"></i></label>
-                                <input type="radio" name="emotional_rating" id="star1" value="1">
-                                <label for="star1"><i class="fas fa-star"></i></label>
-                            </div>
-                            <div class="form-text">How would you rate this memory emotionally?</div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">Tags</label>
-                            <div class="tag-input-container">
-                                <div id="tags-container"></div>
-                                <input type="text" id="actual-tag-input" placeholder="Type and press Enter">
-                                <input type="hidden" id="tags" name="tags">
-                            </div>
-                            <div class="form-text">Press Enter to add a tag, click on the X to remove.</div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="5"></textarea>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">Photos</label>
-                            <div id="drop-area">
-                                <p>Drag & drop photos here or</p>
-                                <input type="file" id="photo-upload" name="photos" accept="image/*" multiple class="d-none">
-                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('photo-upload').click()">
-                                    Select Photos
-                                </button>
-                                <div class="form-text mt-2">You can upload multiple photos at once</div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-4" id="preview-container">
-                            <!-- Photo previews will be inserted here by JavaScript -->
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_public" name="is_public">
-                                <label class="form-check-label" for="is_public">
-                                    Make this memory public
-                                </label>
-                                <div class="form-text">Public memories can be viewed by anyone with the link</div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('memories.index') }}" class="btn btn-light">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Save Memory</button>
-                        </div>
-                    </form>
+            
+            <form method="post" enctype="multipart/form-data" id="memory-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="lat" id="lat" value="">
+                <input type="hidden" name="lng" id="lng" value="">
+                
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title*</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-4 mt-4 mt-lg-0">
-            <div class="card animate fade-in" style="animation-delay: 0.2s;">
-                <div class="card-body">
-                    <h4 class="card-title mb-3">Memory Tips</h4>
-                    <ul class="list-unstyled">
-                        <li class="mb-3">
-                            <i class="fas fa-camera-retro text-primary me-2"></i>
-                            <strong>Photos tell the story</strong>
-                            <p class="text-muted small">Upload multiple photos to capture different aspects of your experience.</p>
-                        </li>
-                        <li class="mb-3">
-                            <i class="fas fa-tags text-primary me-2"></i>
-                            <strong>Use descriptive tags</strong>
-                            <p class="text-muted small">Add tags like "beach", "food", "adventure" to easily find memories later.</p>
-                        </li>
-                        <li class="mb-3">
-                            <i class="fas fa-pencil-alt text-primary me-2"></i>
-                            <strong>Be specific in descriptions</strong>
-                            <p class="text-muted small">Include details about what made this experience special or memorable.</p>
-                        </li>
-                        <li>
-                            <i class="fas fa-map-pin text-primary me-2"></i>
-                            <strong>Add location details</strong>
-                            <p class="text-muted small">Including coordinates helps place your memory on the map view.</p>
-                        </li>
-                    </ul>
+                
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date*</label>
+                    <input type="date" class="form-control" id="date" name="date" required>
                 </div>
-            </div>
+                
+                <div class="mb-3">
+                    <label for="location" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="location" name="location" 
+                           placeholder="Search for a location or click on the map">
+                    <div class="location-picker-help">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Use the map below to pin your location. You can search for a place or click directly on the map.
+                    </div>
+                    <div id="map-picker"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description*</label>
+                    <textarea class="form-control" id="description" name="description" rows="6" required></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rating" class="form-label">Rating</label>
+                    <select class="form-select" id="rating" name="rating">
+                        <option value="">-- Select Rating --</option>
+                        <option value="1">★☆☆☆☆ (1/5)</option>
+                        <option value="2">★★☆☆☆ (2/5)</option>
+                        <option value="3">★★★☆☆ (3/5)</option>
+                        <option value="4">★★★★☆ (4/5)</option>
+                        <option value="5">★★★★★ (5/5)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="tags" class="form-label">Tags</label>
+                    <input type="text" class="form-control" id="tags" name="tags" 
+                           placeholder="Comma separated tags (e.g., Beach, Food, Adventure)">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="travel_plan" class="form-label">Associate with Travel Plan</label>
+                    <select class="form-select" id="travel_plan" name="travel_plan_id">
+                        <option value="">-- None --</option>
+                        {% for plan in travel_plans %}
+                        <option value="{{ plan.id }}">{{ plan.title }} ({{ plan.start_date.strftime('%Y-%m-%d') }} to {{ plan.end_date.strftime('%Y-%m-%d') }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="image" class="form-label">Image</label>
+                    <input class="form-control" type="file" id="image" name="image" accept="image/*">
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Memory
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize drag and drop for photos
-    initializeDragDrop();
+    // Initialize the map
+    const map = L.map('map-picker').setView([0, 0], 2);
     
-    // Tag input functionality
-    const tagsContainer = document.getElementById('tags-container');
-    const tagInput = document.getElementById('actual-tag-input');
-    const hiddenTagInput = document.getElementById('tags');
-    let tags = [];
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
     
-    tagInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const tag = this.value.trim();
-            if (tag && !tags.includes(tag)) {
-                tags.push(tag);
-                updateTags();
-                this.value = '';
-            }
+    // Add geocoder control
+    const geocoder = L.Control.geocoder({
+        defaultMarkGeocode: false
+    }).addTo(map);
+    
+    // Current marker
+    let marker;
+    
+    // Handle geocoding results
+    geocoder.on('markgeocode', function(e) {
+        const result = e.geocode;
+        
+        // Update location input
+        document.getElementById('location').value = result.name;
+        
+        // Update hidden lat/lng inputs
+        document.getElementById('lat').value = result.center.lat;
+        document.getElementById('lng').value = result.center.lng;
+        
+        // Update map view and marker
+        map.setView(result.center, 14);
+        updateMarker(result.center);
+    });
+    
+    // Handle map clicks
+    map.on('click', function(e) {
+        // Update hidden lat/lng inputs
+        document.getElementById('lat').value = e.latlng.lat;
+        document.getElementById('lng').value = e.latlng.lng;
+        
+        // Update map marker
+        updateMarker(e.latlng);
+        
+        // Reverse geocode to get location name
+        reverseGeocode(e.latlng);
+    });
+    
+    // Function to update marker
+    function updateMarker(latlng) {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker(latlng).addTo(map);
+    }
+    
+    // Function to reverse geocode
+    function reverseGeocode(latlng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.display_name) {
+                    document.getElementById('location').value = data.display_name;
+                }
+            })
+            .catch(error => console.error('Error reverse geocoding:', error));
+    }
+    
+    // Handle location input search
+    document.getElementById('location').addEventListener('change', function() {
+        const query = this.value;
+        if (query.length > 0) {
+            geocoder.geocode(query);
         }
     });
     
-    function updateTags() {
-        tagsContainer.innerHTML = '';
-        tags.forEach((tag, index) => {
-            const tagElement = document.createElement('span');
-            tagElement.className = 'tag';
-            tagElement.innerHTML = `${tag}<i class="fas fa-times" data-index="${index}"></i>`;
-            tagsContainer.appendChild(tagElement);
-        });
-        hiddenTagInput.value = tags.join(',');
-        
-        // Add event listeners for delete buttons
-        document.querySelectorAll('.tag i').forEach(icon => {
-            icon.addEventListener('click', function() {
-                const index = parseInt(this.getAttribute('data-index'));
-                tags.splice(index, 1);
-                updateTags();
-            });
-        });
+    // Try to get user's current location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                map.setView([userLocation.lat, userLocation.lng], 10);
+            },
+            function(error) {
+                console.log('Error getting location:', error);
+            }
+        );
     }
     
-    // Get current location
-    document.getElementById('get-current-location').addEventListener('click', function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                document.getElementById('lat').value = position.coords.latitude;
-                document.getElementById('lng').value = position.coords.longitude;
-            }, function() {
-                alert('Unable to retrieve your location');
-            });
-        } else {
-            alert('Geolocation is not supported by your browser');
+    // Form validation
+    document.getElementById('memory-form').addEventListener('submit', function(e) {
+        const title = document.getElementById('title').value;
+        const date = document.getElementById('date').value;
+        const description = document.getElementById('description').value;
+        
+        if (!title || !date || !description) {
+            e.preventDefault();
+            alert('Please fill in all required fields (Title, Date, and Description)');
         }
     });
 });
 </script>
-{% endblock %}
-
 {% endblock %}

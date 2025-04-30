@@ -1,8 +1,17 @@
 from datetime import datetime, timedelta
 import json as python_json  # import standard library json module
+from markupsafe import Markup
 
 def register_filters(app):
     """Register custom template filters for the Flask app."""
+    
+    @app.template_filter('nl2br')
+    def nl2br(value):
+        """Convert newlines to HTML break tags."""
+        if value is None:
+            return ""
+        result = str(value).replace('\n', Markup('<br>\n'))
+        return Markup(result)
     
     @app.template_filter('datetime_format')
     def datetime_format(value, format='%B %d, %Y'):

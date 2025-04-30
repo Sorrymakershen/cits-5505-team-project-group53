@@ -17,6 +17,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['WTF_CSRF_ENABLED'] = False  # 临时禁用 CSRF 保护以解决问题
 
+# Google Maps API Key
+app.config['GOOGLE_MAPS_API_KEY'] = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
 # Initialize CSRF protection
 from app.csrf_config import configure_csrf
 csrf = configure_csrf(app)

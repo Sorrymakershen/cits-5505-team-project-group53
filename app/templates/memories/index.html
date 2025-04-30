@@ -2,6 +2,96 @@
 
 {% block title %}Travel Memories - Travel Planning Platform{% endblock %}
 
+{% block head %}
+{{ super() }}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<!-- MarkerCluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<!-- Daterangepicker CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    /* Map styles */
+    #memory-map-container {
+        display: none; /* Hidden by default, will be toggled */
+        margin-bottom: 2rem;
+    }
+    
+    #memory-map {
+        height: 500px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .map-controls {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 999;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .map-control-btn {
+        padding: 8px 12px;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .map-control-btn:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+    }
+    
+    .custom-marker-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .memory-info-window {
+        max-width: 320px;
+        padding: 5px;
+    }
+    
+    .memory-info-window h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .memory-thumbnail {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .view-toggle-btn.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="py-5">
     <div class="container">
@@ -19,7 +109,7 @@
                         <span class="visually-hidden">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ url_for('memories.map_view') }}">Map View</a></li>
+                        <!-- Map View option removed -->
                         <li><a class="dropdown-item" href="{{ url_for('memories.timeline') }}">Timeline View</a></li>
                     </ul>
                 </div>
@@ -53,7 +143,47 @@
             </div>
         </div>
         
-        <div class="row g-4">
+        <!-- View Toggle Buttons -->
+        <div class="d-flex justify-content-center mb-4">
+            <div class="btn-group" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-primary view-toggle-btn active" data-view="grid">
+                    <i class="fas fa-th me-2"></i>Grid View
+                </button>
+                <button type="button" class="btn btn-outline-primary view-toggle-btn" data-view="map">
+                    <i class="fas fa-map-marked-alt me-2"></i>Map View
+                </button>
+            </div>
+        </div>
+        
+        <!-- Map Container -->
+        <div id="memory-map-container" class="position-relative animate fade-in mb-4">
+            <!-- Date Range Filter for Map -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <label for="date-range-filter" class="form-label small">Filter by Date Range</label>
+                            <input type="text" id="date-range-filter" class="form-control" placeholder="Select date range">
+                        </div>
+                        <div class="col-md-4">
+                            <button id="apply-date-filter" class="btn btn-primary mt-4">Apply Filter</button>
+                            <button id="reset-date-filter" class="btn btn-outline-secondary mt-4">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="memory-map"></div>
+            <div class="map-controls">
+                <button id="zoomWorld" class="map-control-btn" title="View World Map">
+                    <i class="fas fa-globe-americas"></i>
+                </button>
+                <button id="toggleTerrain" class="map-control-btn" title="Toggle Terrain View">
+                    <i class="fas fa-mountain"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="row g-4" id="memory-grid">
             {% if memories %}
                 {% for memory in memories %}
                     <div class="col-md-6 col-lg-4 animate fade-in" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
@@ -72,13 +202,21 @@
                                         <span class="badge bg-info">Public</span>
                                     {% endif %}
                                 </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
-                                    <span>{{ memory.location or 'No location specified' }}</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-calendar text-primary me-2"></i>
-                                    <span>{{ memory.visit_date.strftime('%b %d, %Y') if memory.visit_date else 'No date specified' }}</span>
+                                <div class="memory-list-item" data-id="{{ memory.id }}" 
+                                    data-lat="{{ memory.lat }}" data-lng="{{ memory.lng }}"
+                                    {% if memory.created_at and memory.created_at > (now - timedelta(days=30)) %}
+                                    class="recent"
+                                    {% endif %}>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p class="mb-1 text-muted">
+                                                <i class="fas fa-map-marker-alt"></i> {{ memory.location or 'No location specified' }}
+                                                {% if memory.visit_date %}
+                                                    &bull; <i class="far fa-calendar-alt"></i> {{ memory.visit_date.strftime('%b %d, %Y') }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Rating Stars -->
@@ -163,4 +301,37 @@
         {% endif %}
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<!-- Moment.js for date handling -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<!-- DateRangePicker -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<!-- Custom map script -->
+<script src="{{ url_for('static', filename='js/memories-index-map.js') }}"></script>
+<script>
+    // Check URL parameters to activate map view if needed
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewParam = urlParams.get('view');
+        
+        if (viewParam === 'map') {
+            console.log('Activating map view based on URL parameter');
+            // Find the map view button and click it
+            const mapViewBtn = document.querySelector('.view-toggle-btn[data-view="map"]');
+            if (mapViewBtn) {
+                setTimeout(() => {
+                    mapViewBtn.click();
+                }, 100);
+            }
+        }
+    });
+</script>
 {% endblock %}

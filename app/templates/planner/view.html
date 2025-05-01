@@ -270,7 +270,7 @@
                 <div class="card animate fade-in" data-delay="0.3">
                     <div class="card-body p-4" id="itinerary-container">
                         {% for day, items in itinerary_by_day %}
-                            <div class="mb-4 day-container">
+                            <div class="mb-4 day-container day-{{ day }}">
                                 <div class="bg-light rounded p-3 mb-3 itinerary-day">
                                     <h4 class="mb-0">Day {{ day }}: {{ day_timedelta(day-1, plan.start_date) | datetime_format }}</h4>
                                 </div>
@@ -372,6 +372,7 @@
 
 
 <!-- Time Editor Modal (Potentially redundant now) -->
+<!--
 <div class="modal fade" id="timeEditorModal" tabindex="-1" aria-labelledby="timeEditorModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -394,6 +395,7 @@
         </div>
     </div>
 </div>
+-->
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
@@ -429,6 +431,7 @@
     const AI_RECOMMENDATIONS_URL = `/planner/${PLAN_ID}/ai_recommendations`;
     const ADD_RECOMMENDATION_URL = `/planner/${PLAN_ID}/add_recommendation`;
     const GET_ITINERARY_DATA_URL = `/planner/${PLAN_ID}/get_itinerary_data`;
+    const UPDATE_ITEM_DAY_TIME_URL = `/planner/${PLAN_ID}/update_item_day_time`; // Add this line
 
     // Initialize map
     document.addEventListener('DOMContentLoaded', function() {
@@ -453,144 +456,110 @@
         initializePlanMap();
         
         // Setup modals - 将modal实例定义在更高的作用域内
-        const timeEditorModal = new bootstrap.Modal(document.getElementById('timeEditorModal'));
+        // const timeEditorModal = new bootstrap.Modal(document.getElementById('timeEditorModal')); // Comment out old modal instance
         const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
         const dayTimeEditorModal = new bootstrap.Modal(document.getElementById('dayTimeEditorModal'));
         
-        // Time edit button click handler
+        // Time edit button click handler (MODIFIED to use dayTimeEditorModal)
         document.querySelectorAll('.edit-time-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const itemId = this.dataset.itemId;
                 const itemElement = document.getElementById(`item-${itemId}`);
+                let currentDay = '';
                 let currentTime = '';
+
+                // Find the day container to get the day number
+                const dayContainer = itemElement?.closest('.day-container');
+                if (dayContainer) {
+                    // Extract day number from class name like 'day-1', 'day-2' etc.
+                    const dayClass = Array.from(dayContainer.classList).find(cls => cls.startsWith('day-'));
+                    if (dayClass) {
+                        currentDay = dayClass.split('-')[1];
+                    }
+                }
                 
+                // Extract current time if available
                 if (itemElement) {
                     const timeElement = itemElement.querySelector('.mb-2 i.fa-clock')?.parentNode;
                     if (timeElement && !timeElement.classList.contains('d-none')) {
-                        // Extract time from display
                         const timeText = timeElement.textContent.trim();
                         const timeMatch = timeText.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-                        
                         if (timeMatch) {
                             let hours = parseInt(timeMatch[1]);
                             const minutes = timeMatch[2];
                             const period = timeMatch[3];
-                            
-                            // Convert to 24-hour format for time input
-                            if (period && period.toUpperCase() === 'PM' && hours < 12) {
-                                hours += 12;
-                            } else if (period && period.toUpperCase() === 'AM' && hours === 12) {
-                                hours = 0;
-                            }
-                            
+                            if (period && period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                            if (period && period.toUpperCase() === 'AM' && hours === 12) hours = 0;
                             currentTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
                         }
                     }
                 }
                 
-                document.getElementById('editItemId').value = itemId;
-                document.getElementById('visitTime').value = currentTime;
-                timeEditorModal.show();
+                // Populate and show the Day/Time modal
+                document.getElementById('editDayTimeItemId').value = itemId;
+                document.getElementById('editDaySelect').value = currentDay;
+                document.getElementById('editVisitTime').value = currentTime;
+                dayTimeEditorModal.show();
             });
         });
         
-        // Save time button click handler
+        // Save time button click handler (Keep for now, but might be redundant) - COMMENT OUT
+        /*
         document.getElementById('saveTimeBtn').addEventListener('click', function() {
             const itemId = document.getElementById('editItemId').value;
             const visitTime = document.getElementById('visitTime').value;
             
             // Update time via AJAX
             fetch(UPDATE_ITEM_TIME_URL, {
+                // ... fetch options ...
+            })
+            .then(response => response.json())
+            .then(data => {
+                // ... success/error handling ...
+            })
+            .catch(error => {
+                // ... error handling ...
+            });
+        });
+        */
+        
+        // Save Day/Time button click handler (NEW)
+        document.getElementById('saveDayTimeBtn').addEventListener('click', function() {
+            const itemId = document.getElementById('editDayTimeItemId').value;
+            const selectedDay = document.getElementById('editDaySelect').value;
+            const visitTime = document.getElementById('editVisitTime').value;
+
+            fetch(UPDATE_ITEM_DAY_TIME_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     item_id: itemId,
+                    day: selectedDay,
                     time: visitTime
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal - use modal close button directly
-                    document.getElementById('timeEditorModal').querySelector('.btn-close').click();
-                    
-                    try {
-                        showToast('Time updated successfully', 'success');
-                        
-                        // display success message
-                        const itemElement = document.getElementById(`item-${itemId}`);
-                        if (itemElement) {
-                            // search for the itinerary-content div
-                            const contentDiv = itemElement.querySelector('.itinerary-content');
-                            if (!contentDiv) {
-                                console.error('Cannot find itinerary-content div inside itinerary item:', itemId);
-                                return;
-                            }
-                            
-                            // search for the time element
-                            let timeElement = null;
-                            const timeElements = contentDiv.querySelectorAll('.mb-2');
-                            
-                            // iterate through time elements to find the one with clock icon
-                            for (let i = 0; i < timeElements.length; i++) {
-                                if (timeElements[i].querySelector('i.fa-clock')) {
-                                    timeElement = timeElements[i];
-                                    break;
-                                }
-                            }
-                            
-                            const formattedTime = data.formatted_time || visitTime;
-                            
-                            // if time element not found, create a new one
-                            if (!timeElement) {
-                                // create a new time element
-                                timeElement = document.createElement('div');
-                                timeElement.className = 'mb-2';
-                                timeElement.innerHTML = `<i class="far fa-clock text-primary me-1"></i>${formattedTime}`;
-                                
-                                // Find the right position to insert the time element (after location and cost if they exist)
-                                const costElement = contentDiv.querySelector('.fa-money-bill-wave')?.closest('.mb-2');
-                                const locationElement = contentDiv.querySelector('.fa-map-marker-alt')?.closest('.mb-2');
-                                
-                                if (costElement) {
-                                    // Insert after cost element
-                                    costElement.insertAdjacentElement('afterend', timeElement);
-                                } else if (locationElement) {
-                                    // Insert after location element
-                                    locationElement.insertAdjacentElement('afterend', timeElement);
-                                } else {
-                                    // Insert after title (h5)
-                                    const titleElement = contentDiv.querySelector('h5');
-                                    if (titleElement) {
-                                        titleElement.insertAdjacentElement('afterend', timeElement);
-                                    } else {
-                                        // Fallback: just append to content div
-                                        contentDiv.appendChild(timeElement);
-                                    }
-                                }
-                            } else {
-                                // if time element found, update its content
-                                timeElement.innerHTML = `<i class="far fa-clock text-primary me-1"></i>${formattedTime}`;
-                            }
-                        } else {
-                            console.error('Cannot find itinerary item:', itemId);
-                        }
-                    } catch (error) {
-                        console.error('Error updating time:', error);
-                        showToast('Time updated successfully but unable to refresh display', 'warning');
+                    // Close modal
+                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('dayTimeEditorModal'));
+                    if (modalInstance) {
+                        modalInstance.hide();
                     }
+                    showToast('Day and time updated successfully', 'success');
+                    updateItinerary(true); // Refresh itinerary, cost, and map
                 } else {
-                    showToast(data.message || 'Time update unsuccessful', 'danger');
+                    showToast(data.message || 'Failed to update day and time', 'danger');
                 }
             })
             .catch(error => {
-                console.error('Error updating time:', error);
-                showToast('Error updating time', 'danger');
+                console.error('Error updating day/time:', error);
+                showToast('An error occurred while updating day and time', 'danger');
             });
         });
-        
+
         // Delete button click handler
         document.querySelectorAll('.delete-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -1145,7 +1114,7 @@
                         // Generate HTML for each day and its items
                         data.itinerary_by_day.forEach(([day, items]) => {
                             let dayHTML = `
-                            <div class="mb-4 day-container day-${day}">
+                            <div class="mb-4 day-container day-${day}"> <!-- Added day-${day} class -->
                                 <div class="bg-light rounded p-3 mb-3 itinerary-day">
                                     <h4 class="mb-0">Day ${day}: ${data.day_dates ? data.day_dates[day-1] : ''}</h4>
                                 </div>
@@ -1214,6 +1183,12 @@
                         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
                         [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
                         
+                        // 确保地图标记点也更新到最新数据
+                        if (window.planMap && data.itinerary_items_json) {
+                            console.log('从updateItinerary更新地图标记');
+                            updateMapMarkers(data.itinerary_items_json);
+                        }
+                        
                         // If highlighting new item, add a scroll effect
                         if (isHighlightNewest && data.item) {
                             setTimeout(() => {
@@ -1248,36 +1223,47 @@
         
         // Add event listeners to newly generated buttons
         function addEventListenersToButtons() {
-            // Add event listeners for time edit buttons
+            // Add event listeners for time edit buttons (MODIFIED to use dayTimeEditorModal)
             document.querySelectorAll('.edit-time-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const itemId = this.dataset.itemId;
-                    document.getElementById('editItemId').value = itemId;
-                    
-                    // Try to get current time value
-                    const timeElement = document.querySelector(`#item-${itemId} .fa-clock`);
+                    const itemElement = document.getElementById(`item-${itemId}`);
+                    let currentDay = '';
                     let currentTime = '';
-                    if (timeElement) {
-                        const timeText = timeElement.parentNode.textContent.trim();
-                        const timeMatch = timeText.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-                        if (timeMatch) {
-                            let hours = parseInt(timeMatch[1]);
-                            const minutes = timeMatch[2];
-                            const period = timeMatch[3];
-                            
-                            if (period && period.toUpperCase() === 'PM' && hours < 12) {
-                                hours += 12;
-                            } else if (period && period.toUpperCase() === 'AM' && hours === 12) {
-                                hours = 0;
-                            }
-                            
-                            currentTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
+
+                    // Find the day container to get the day number
+                    const dayContainer = itemElement?.closest('.day-container');
+                    if (dayContainer) {
+                        const dayClass = Array.from(dayContainer.classList).find(cls => cls.startsWith('day-'));
+                        if (dayClass) {
+                            currentDay = dayClass.split('-')[1];
                         }
                     }
                     
-                    document.getElementById('visitTime').value = currentTime;
-                    const timeEditorModal = new bootstrap.Modal(document.getElementById('timeEditorModal'));
-                    timeEditorModal.show();
+                    // Extract current time if available
+                    if (itemElement) {
+                        const timeElement = itemElement.querySelector('.mb-2 i.fa-clock')?.parentNode;
+                        if (timeElement && !timeElement.classList.contains('d-none')) {
+                            const timeText = timeElement.textContent.trim();
+                            const timeMatch = timeText.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+                            if (timeMatch) {
+                                let hours = parseInt(timeMatch[1]);
+                                const minutes = timeMatch[2];
+                                const period = timeMatch[3];
+                                if (period && period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                                if (period && period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+                                currentTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                            }
+                        }
+                    }
+                    
+                    // Populate and show the Day/Time modal
+                    document.getElementById('editDayTimeItemId').value = itemId;
+                    document.getElementById('editDaySelect').value = currentDay;
+                    document.getElementById('editVisitTime').value = currentTime;
+                    // Ensure modal instance exists if called dynamically
+                    const dayTimeModal = bootstrap.Modal.getInstance(document.getElementById('dayTimeEditorModal')) || new bootstrap.Modal(document.getElementById('dayTimeEditorModal'));
+                    dayTimeModal.show();
                 });
             });
             
@@ -1286,7 +1272,8 @@
                 btn.addEventListener('click', function() {
                     const itemId = this.dataset.itemId;
                     document.getElementById('deleteItemId').value = itemId;
-                    const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                    // Ensure modal instance exists if called dynamically
+                    const deleteConfirmModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')) || new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
                     deleteConfirmModal.show();
                 });
             });
@@ -1436,8 +1423,13 @@
                 // Extend bounds
                 bounds.extend([lat, lng]);
                 
-                // Create marker
+                // Create marker and store item data
                 const marker = L.marker([lat, lng]).addTo(map);
+                marker.itemData = { // Store item data with the marker
+                    id: item.id,
+                    day: item.day,
+                    time: item.time || '' // Store time, default to empty string if null/undefined
+                };
                 
                 // --- Add permanent tooltip ---
                 let tooltipContent = '';
@@ -1460,11 +1452,21 @@
                 }
                 // --- End of tooltip addition ---
 
-                // Add popup information
-                let popupContent = `<h5>${item.activity || 'Unnamed Activity'}</h5>`;
-                if (item.location) popupContent += `<p>${item.location}</p>`;
-                if (item.day) popupContent += `<p>Day ${item.day}</p>`;
-                if (item.time) popupContent += `<p>Time: ${item.time}</p>`;
+                // Add popup information with Edit and Delete buttons
+                let popupContent = `
+                    <h5>${item.activity || 'Unnamed Activity'}</h5>
+                    ${item.location ? `<p><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.location}</p>` : ''}
+                    ${item.day ? `<p><i class="fas fa-calendar-day me-1"></i> Day ${item.day}</p>` : ''}
+                    ${item.time ? `<p><i class="far fa-clock text-primary me-1"></i> ${item.time}</p>` : ''}
+                    <div class="mt-2 d-flex justify-content-end gap-2">
+                         <button class="btn btn-sm btn-outline-primary popup-edit-btn" data-item-id="${item.id}">
+                             <i class="fas fa-edit"></i> Edit Day/Time
+                         </button>
+                         <button class="btn btn-sm btn-outline-danger popup-delete-btn" data-item-id="${item.id}">
+                             <i class="fas fa-trash"></i> Delete
+                         </button>
+                    </div>
+                `;
                 
                 marker.bindPopup(popupContent);
             } catch (e) {
@@ -1479,6 +1481,58 @@
                 maxZoom: 15
             });
         }
+
+        // Add event listener for popup button clicks (NEW - using event delegation)
+        map.on('popupopen', function(e) {
+            const popupNode = e.popup._contentNode;
+            if (!popupNode) return;
+
+            const editBtn = popupNode.querySelector('.popup-edit-btn');
+            const deleteBtn = popupNode.querySelector('.popup-delete-btn');
+            const marker = e.popup._source; // Get the marker associated with the popup
+
+            if (editBtn && marker && marker.itemData) {
+                editBtn.addEventListener('click', function() {
+                    const itemId = this.dataset.itemId;
+                    const itemData = marker.itemData;
+
+                    // Populate the Day/Time modal
+                    document.getElementById('editDayTimeItemId').value = itemId;
+                    document.getElementById('editDaySelect').value = itemData.day || ''; // Set day
+
+                    // Format time for input type="time" (HH:mm)
+                    let timeForInput = '';
+                    if (itemData.time) {
+                         const timeMatch = itemData.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+                         if (timeMatch) {
+                            let hours = parseInt(timeMatch[1]);
+                            const minutes = timeMatch[2];
+                            const period = timeMatch[3];
+                            if (period && period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                            if (period && period.toUpperCase() === 'AM' && hours === 12) hours = 0; // Midnight case
+                            timeForInput = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                         }
+                    }
+                    document.getElementById('editVisitTime').value = timeForInput; // Set time
+
+                    // Show the Day/Time modal
+                    const dayTimeModal = bootstrap.Modal.getInstance(document.getElementById('dayTimeEditorModal')) || new bootstrap.Modal(document.getElementById('dayTimeEditorModal'));
+                    dayTimeModal.show();
+                    map.closePopup(); // Close the map popup
+                });
+            }
+
+            if (deleteBtn && marker && marker.itemData) {
+                deleteBtn.addEventListener('click', function() {
+                    const itemId = this.dataset.itemId;
+                    // Populate and show the delete confirmation modal
+                    document.getElementById('deleteItemId').value = itemId;
+                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')) || new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                    deleteModal.show();
+                    map.closePopup(); // Close the map popup
+                });
+            }
+        });
     }
 </script>
 {% endblock %}

@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Address Map Viewer{% endblock %}
+{% block title %}Location Recommendations{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <style>
     .ai-suggestion {
         line-height: 1.6;
@@ -18,74 +19,188 @@
     .ai-suggestion p {
         margin-bottom: 1rem;
     }
+    .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/static/img/plane.jpg');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 4rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 10px 10px;
+    }
+    .map-container {
+        position: relative;
+        height: 600px;
+        width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .location-search {
+        position: relative;
+        z-index: 10;
+    }
+    .cards-container {
+        margin-top: -50px;
+        position: relative;
+        z-index: 20;
+    }
+    .scroll-indicator {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: bounce 2s infinite;
+        cursor: pointer;
+        color: white;
+    }
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0) translateX(-50%);
+        }
+        40% {
+            transform: translateY(-20px) translateX(-50%);
+        }
+        60% {
+            transform: translateY(-10px) translateX(-50%);
+        }
+    }
+    .loading-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(66, 133, 244, 0.2);
+        border-radius: 50%;
+        border-top-color: var(--primary-color);
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 10px;
+    }
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    .search-card {
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    .search-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    #recommendationMap {
+        height: 600px !important;
+        width: 100% !important;
+        z-index: 10;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col">
-            <div class="d-flex align-items-center mb-2">
-                <a href="{{ url_for('main.index') }}" class="text-decoration-none me-3">
-                    <i class="fas fa-arrow-left"></i> Back to Home
-                </a>
+<!-- Hero Section with Search -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 data-aos="fade-up" class="display-4 fw-bold mb-3">Discover Amazing Places</h1>
+                <p data-aos="fade-up" data-aos-delay="100" class="lead mb-5">Find recommendations for your next adventure</p>
+                
+                <!-- Search Form -->
+                <form id="recommendationForm" method="post" class="needs-validation location-search" data-aos="fade-up" data-aos-delay="200" novalidate>
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control rounded-start" id="destination" name="destination" placeholder="Enter a location (e.g., New York City, Paris, Tokyo)" required>
+                        <button type="submit" class="btn btn-primary" id="getRecommendations">
+                            <i class="fas fa-search me-2"></i> Discover
+                        </button>
+                    </div>
+                    <div class="invalid-feedback text-white">Please enter a valid location</div>
+                </form>
             </div>
-            <h1 class="mb-2">Address Map Viewer</h1>
-            <p class="text-muted">Enter an address to view its location on the map</p>
+        </div>
+        <div class="scroll-indicator" id="scrollIndicator">
+            <i class="fas fa-chevron-down fa-2x"></i>
         </div>
     </div>
-      <div class="row">
-        <div class="col-lg-4">
-            <!-- Address Input Form -->
-            <div class="card animate fade-in mb-4">
-                <div class="card-body p-4">
-                    <h3 class="card-title mb-4">Enter Address</h3>
-                    <form id="recommendationForm" method="post" class="needs-validation" novalidate>
-                        <div class="mb-3">
-                            <label for="destination" class="form-label">Address</label>
-                            <input type="text" class="form-control" id="destination" name="destination" placeholder="e.g.: New York City" required>
-                            <div class="invalid-feedback">Please enter a valid address</div>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary" id="getRecommendations">
-                                <i class="fas fa-map-marker-alt me-2"></i> Show on Map
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- AI Recommendations Container -->
-            <div class="card animate fade-in mb-4 d-none" id="aiRecommendationsCard">
-                <div class="card-body p-4">
-                    <h3 class="card-title mb-4">AI Suggestions</h3>
-                    <div id="aiRecommendationsContent" class="ai-suggestion">
-                        <!-- AI recommendations will be displayed here -->
-                    </div>
-                    <div id="aiLoadingIndicator" class="text-center mt-3 d-none">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <span class="ms-2">Getting suggestions...</span>
-                    </div>
+</section>
+
+<!-- Loading Indicator (Positioned in the corner, not over the map) -->
+<div class="loading-indicator" id="loadingIndicator" style="display: none;">
+    <div class="loading-spinner"></div>
+    <span>Processing...</span>
+</div>
+
+<!-- Feature Cards -->
+<div class="container">
+    <div class="row cards-container">
+        <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+            <div class="card search-card h-100">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-map-marker-alt text-primary mb-3" style="font-size: 2.5rem;"></i>
+                    <h4>Explore Destinations</h4>
+                    <p class="text-muted">Discover new places around the world and get detailed recommendations.</p>
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-8">
-            <!-- Map Display -->
-            <div class="card animate fade-in" style="animation-delay: 0.2s;">
-                <div class="card-body p-4">
-                    <h3 class="card-title mb-4">Map</h3>
-                    <!-- Map container is always visible -->
-                    <div id="recommendationMap" style="height: 450px; width: 100%; border-radius: 8px;" class="mb-4"></div>
-                    
-                    <div id="loadingIndicator" class="text-center d-none position-absolute top-50 start-50 translate-middle">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
+        <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+            <div class="card search-card h-100">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-info-circle text-primary mb-3" style="font-size: 2.5rem;"></i>
+                    <h4>Detailed Information</h4>
+                    <p class="text-muted">Get insights about attractions, restaurants, hotels and local activities.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+            <div class="card search-card h-100">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-route text-primary mb-3" style="font-size: 2.5rem;"></i>
+                    <h4>Plan Your Trip</h4>
+                    <p class="text-muted">Save your favorite places and create custom travel itineraries.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full Width Map Section -->
+<section id="mapSection" class="mb-5" style="display: none;">
+    <div class="container-fluid p-0">
+        <div class="card shadow-sm" style="border-radius: 0; border: none;">
+            <div class="card-body p-0">
+                <div id="recommendationMap"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- AI Recommendations Section -->
+    <div class="row mb-5" id="aiRecommendationsSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="mb-3 fw-bold" id="locationTitle">Location Details</h3>
+                    <div id="aiRecommendationsContent" class="ai-suggestion mb-4">
+                        <!-- AI suggestions will appear here -->
+                    </div>
+                    <div id="aiLoadingIndicator" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                <span class="visually-hidden">Getting suggestions...</span>
+                            </div>
+                            <span>Getting suggestions...</span>
                         </div>
-                        <p>Loading map...</p>
                     </div>
                 </div>
             </div>
@@ -95,21 +210,42 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Add Marked.js for Markdown parsing -->
+<!-- Add AOS animation library -->
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    // Initialize AOS animation library
+    AOS.init({
+        duration: 800,
+        easing: 'ease-out',
+        once: true
+    });
+    
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize map
-        const mapContainer = document.getElementById('recommendationMap');
-        if (mapContainer) {
-            mapContainer.style.height = '450px';
-            mapContainer.style.width = '100%';
-            mapContainer.style.display = 'block';
-            mapContainer.style.position = 'relative';
-        }
+        // Scroll indicator functionality
+        document.getElementById('scrollIndicator').addEventListener('click', function() {
+            window.scrollTo({
+                top: window.innerHeight - 70,
+                behavior: 'smooth'
+            });
+        });
         
-        // Initialize map, default view world map
-        const map = L.map('recommendationMap').setView([20, 0], 3); // Default centered on world view
+        // Create map options with all controls explicitly enabled
+        const mapOptions = {
+            zoomControl: true,
+            attributionControl: true,
+            scrollWheelZoom: true,
+            dragging: true,
+            doubleClickZoom: true,
+            zoomSnap: 0.5,
+            zoomDelta: 0.5,
+            trackResize: true,
+            boxZoom: true,
+            keyboard: true
+        };
+        
+        // Initialize map with options
+        const map = L.map('recommendationMap', mapOptions).setView([20, 0], 3);
         
         // Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -117,10 +253,19 @@
             maxZoom: 19
         }).addTo(map);
         
-        // Force map to recalculate size, solving rendering issues
+        // Force map to recalculate size multiple times to ensure proper rendering
         setTimeout(function() {
             map.invalidateSize(true);
-        }, 300);
+        }, 100);
+        
+        setTimeout(function() {
+            map.invalidateSize(true);
+        }, 500);
+        
+        // Add resize listener to handle window resizing
+        window.addEventListener('resize', function() {
+            map.invalidateSize(true);
+        });
         
         // Create marker variable
         let marker = null;
@@ -128,6 +273,8 @@
         // Handle form submission
         const form = document.getElementById('recommendationForm');
         const loadingIndicator = document.getElementById('loadingIndicator');
+        const mapSection = document.getElementById('mapSection');
+        const aiRecommendationsSection = document.getElementById('aiRecommendationsSection');
         
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -136,24 +283,37 @@
             const address = document.getElementById('destination').value.trim();
             
             if (!address) {
-                alert('Please enter a valid address');
+                alert('Please enter a valid location');
                 return;
             }
             
-            // Show loading state
-            loadingIndicator.classList.remove('d-none');
-              // Use Nominatim service for geocoding (address to coordinates)
+            // Show loading state and map section
+            loadingIndicator.style.display = 'flex';
+            mapSection.style.display = 'block';
+            
+            // Force map resize when displayed
+            setTimeout(function() {
+                map.invalidateSize(true);
+            }, 10);
+            
+            // Scroll to map section
+            mapSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Use Nominatim service for geocoding (address to coordinates)
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
                 .then(response => response.json())
                 .then(data => {
                     // Hide loading state
-                    loadingIndicator.classList.add('d-none');
+                    loadingIndicator.style.display = 'none';
                     
                     if (data && data.length > 0) {
                         // Get first result
                         const result = data[0];
                         const lat = parseFloat(result.lat);
                         const lon = parseFloat(result.lon);
+                        
+                        // Update location title
+                        document.getElementById('locationTitle').textContent = result.display_name;
                         
                         // Clear previous marker
                         if (marker) {
@@ -169,29 +329,39 @@
                         `).openPopup();
                         
                         // Center and zoom map
-                        map.setView([lat, lon], 12);
+                        map.setView([lat, lon], 13);
+                        
+                        // Force map resize again after centering
+                        setTimeout(function() {
+                            map.invalidateSize(true);
+                        }, 100);
+                        
+                        // Show AI recommendations section
+                        aiRecommendationsSection.style.display = 'block';
                         
                         // Get AI recommendations for this location
                         getAIRecommendations(result.display_name);
                     } else {
-                        alert('Address not found. Please try a more detailed address');
+                        alert('Location not found. Please try a more detailed address');
                     }
-                })                .catch(error => {
+                })
+                .catch(error => {
                     console.error('Address lookup error:', error);
-                    loadingIndicator.classList.add('d-none');
+                    loadingIndicator.style.display = 'none';
                     alert('Address lookup failed. Please try again later');
                 });
         });
         
         // Function to get AI recommendations for a location
         function getAIRecommendations(location) {
-            const aiRecommendationsCard = document.getElementById('aiRecommendationsCard');
             const aiRecommendationsContent = document.getElementById('aiRecommendationsContent');
             const aiLoadingIndicator = document.getElementById('aiLoadingIndicator');
             
-            // Show the recommendations card and loading indicator
-            aiRecommendationsCard.classList.remove('d-none');
-            aiLoadingIndicator.classList.remove('d-none');
+            // Show loading indicator
+            aiLoadingIndicator.style.display = 'block';
+            
+            // Ensure AI recommendations section is visible regardless of any issues
+            document.getElementById('aiRecommendationsSection').style.display = 'block';
             
             // Use our secure backend API endpoint instead of directly calling Gemini API
             fetch('/planner/api/location_recommendations', {
@@ -212,7 +382,7 @@
             })
             .then(data => {
                 // Hide loading indicator
-                aiLoadingIndicator.classList.add('d-none');
+                aiLoadingIndicator.style.display = 'none';
                 
                 // Display the AI-generated content from backend
                 if (data && data.success && data.recommendation) {
@@ -228,7 +398,7 @@
             })
             .catch(error => {
                 console.error('AI recommendation error:', error);
-                aiLoadingIndicator.classList.add('d-none');
+                aiLoadingIndicator.style.display = 'none';
                 
                 // Show detailed error message
                 aiRecommendationsContent.innerHTML = `

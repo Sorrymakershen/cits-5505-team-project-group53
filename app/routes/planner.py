@@ -6,12 +6,46 @@ from datetime import datetime, timedelta
 import random  # For generating random recommendations
 import requests  # add requests module for API calls
 import json  # add json module for parsing JSON data
+import hashlib  # For generating cache keys
+import time  # For cache expiration management
 
 planner_bp = Blueprint('planner', __name__, url_prefix='/planner')
 
-# configuration for Gemini API
+# Configuration for Gemini API
 GEMINI_API_KEY = "AIzaSyAwbiZHLVnwXMhVXOS8heweUSXSyU4FTYE"
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+# Memory cache system for API responses
+api_response_cache = {}
+CACHE_EXPIRY = 3600  # Cache expiry time in seconds (1 hour)
+
+def get_cache_key(endpoint, params):
+    """Generate a cache key based on endpoint and parameters."""
+    # Convert parameters to a sorted string to ensure consistent key generation
+    param_str = json.dumps(params, sort_keys=True)
+    # Generate a fixed-length key using MD5 hash
+    return f"{endpoint}:{hashlib.md5(param_str.encode()).hexdigest()}"
+
+def get_cached_response(endpoint, params):
+    """Retrieve a cached API response if available and not expired."""
+    cache_key = get_cache_key(endpoint, params)
+    cached_item = api_response_cache.get(cache_key)
+    
+    if cached_item:
+        timestamp, data = cached_item
+        # Check if cache is still valid
+        if time.time() - timestamp < CACHE_EXPIRY:
+            print(f"Cache hit for: {endpoint}")
+            return data
+    
+    print(f"Cache miss for: {endpoint}")
+    return None
+
+def set_cached_response(endpoint, params, response):
+    """Cache an API response with current timestamp."""
+    cache_key = get_cache_key(endpoint, params)
+    api_response_cache[cache_key] = (time.time(), response)
+    print(f"Cached response for: {endpoint}")
 
 @planner_bp.route('/')
 @login_required
@@ -442,6 +476,23 @@ def ai_recommendations(plan_id):
     data = request.json
     day = data.get('day', 1)
     
+    # Cache parameters for this recommendation
+    cache_params = {
+        'plan_id': plan_id,
+        'day': day,
+        'destination': plan.destination,
+        'interests': plan.interests or '',
+        'start_date': plan.start_date.strftime('%Y-%m-%d'),
+        'end_date': plan.end_date.strftime('%Y-%m-%d'),
+        'endpoint': 'ai_recommendations'
+    }
+    
+    # Check cache first
+    cached_response = get_cached_response('ai_recommendations', cache_params)
+    if cached_response:
+        print(f"Using cached AI recommendations for plan {plan_id}, day {day}")
+        return jsonify(cached_response)
+    
     # Prepare prompt in English
     prompt_text = f"""
     Recommend 5 different activities for Day {day} of the following travel plan:
@@ -511,11 +562,17 @@ def ai_recommendations(plan_id):
                     except (ValueError, TypeError):
                         rec['lng'] = None
 
-                return jsonify({
+                response_payload = {
                     'success': True, 
                     'recommendations': recommendations,
                     'day': day
-                })
+                }
+                
+                # Cache the response
+                set_cached_response('ai_recommendations', cache_params, response_payload)
+                print(f"Cached AI recommendations for plan {plan_id}, day {day}")
+                
+                return jsonify(response_payload)
             else:
                 # Failed to format response, return raw response
                 return jsonify({
@@ -1167,6 +1224,18 @@ def location_recommendations():
         
         if not location:
             return jsonify({'success': False, 'message': 'Location is required'}), 400
+        
+        # Cache key parameters for this request
+        cache_params = {
+            'location': location,
+            'endpoint': 'location_recommendations'
+        }
+        
+        # Check cache first
+        cached_response = get_cached_response('location_recommendations', cache_params)
+        if cached_response:
+            print(f"Using cached recommendation for: {location}")
+            return jsonify(cached_response)
             
         # Prepare prompt in English for more consistent and higher quality responses
         prompt_text = f"""
@@ -1226,11 +1295,18 @@ def location_recommendations():
             # Remove leading whitespace after removing the intro
             cleaned_text = cleaned_text.lstrip()
             
-            return jsonify({
+            # Prepare response payload
+            response_payload = {
                 'success': True, 
                 'recommendation': cleaned_text,
                 'location': location
-            })
+            }
+            
+            # Cache the response for future requests
+            set_cached_response('location_recommendations', cache_params, response_payload)
+            print(f"Cached recommendation for: {location}")
+            
+            return jsonify(response_payload)
         else:
             return jsonify({
                 'success': False, 

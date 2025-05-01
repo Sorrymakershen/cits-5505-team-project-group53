@@ -222,6 +222,9 @@
 {% endblock %}
 
 {% block content %}
+<!-- Page State Indicator (hidden) -->
+<input type="hidden" id="pageLoadState" value="fresh">
+
 <!-- Hero Section with Search -->
 <section class="hero-section">
     <div class="container">
@@ -259,12 +262,6 @@
         </div>
     </div>
 </section>
-
-<!-- Loading Indicator (Positioned in the corner, not over the map) -->
-<div class="loading-indicator" id="loadingIndicator" style="display: none;">
-    <div class="loading-spinner"></div>
-    <span>Processing...</span>
-</div>
 
 <!-- Feature Cards -->
 <div class="container">
@@ -427,6 +424,19 @@
     });
     
     document.addEventListener('DOMContentLoaded', function() {
+        // Cache for search results to improve back navigation experience
+        const resultCache = new Map();
+        
+        // Check if this is a back navigation or direct page load
+        const pageState = performance.getEntriesByType("navigation")[0].type;
+        const isBackNavigation = pageState === "back_forward";
+        const pageLoadState = document.getElementById('pageLoadState');
+        
+        if (isBackNavigation) {
+            console.log("Detected back navigation, restoring state...");
+            pageLoadState.value = "back";
+        }
+        
         // Scroll indicator functionality
         document.getElementById('scrollIndicator').addEventListener('click', function() {
             window.scrollTo({
@@ -449,64 +459,81 @@
             keyboard: true
         };
         
-        // Initialize map with options
-        const map = L.map('recommendationMap', mapOptions).setView([20, 0], 3);
+        // Initialize map with options - but defer actual initialization until needed
+        let map = null;
+        let currentTileLayer = null;
+        let satelliteTileLayer = null;
         
-        // Add OpenStreetMap tile layer
-        let currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(map);
-        
-        // Define satellite tile layer
-        const satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-            maxZoom: 19
-        });
-        
-        // Force map to recalculate size multiple times to ensure proper rendering
-        setTimeout(function() {
-            map.invalidateSize(true);
-        }, 100);
-        
-        setTimeout(function() {
-            map.invalidateSize(true);
-        }, 500);
+        // Function to initialize map only when needed
+        function initMap() {
+            if (map) return map; // Return existing map if already initialized
+            
+            console.log("Initializing map...");
+            map = L.map('recommendationMap', mapOptions).setView([20, 0], 3);
+            
+            // Add OpenStreetMap tile layer
+            currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Define satellite tile layer
+            satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            });
+            
+            // Force map to recalculate size multiple times to ensure proper rendering
+            setTimeout(function() {
+                map.invalidateSize(true);
+            }, 100);
+            
+            setTimeout(function() {
+                map.invalidateSize(true);
+            }, 500);
+            
+            return map;
+        }
         
         // Add resize listener to handle window resizing
         window.addEventListener('resize', function() {
-            map.invalidateSize(true);
+            if (map) map.invalidateSize(true);
         });
         
-        // Custom map controls
-        document.getElementById('zoomInBtn').addEventListener('click', function() {
-            map.zoomIn();
-        });
-        
-        document.getElementById('zoomOutBtn').addEventListener('click', function() {
-            map.zoomOut();
-        });
-        
-        document.getElementById('resetMapBtn').addEventListener('click', function() {
-            if (marker) {
-                map.setView(marker.getLatLng(), 13);
-            } else {
-                map.setView([20, 0], 3);
-            }
-        });
-        
-        document.getElementById('satelliteViewBtn').addEventListener('click', function() {
-            if (map.hasLayer(satelliteTileLayer)) {
-                map.removeLayer(satelliteTileLayer);
-                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    maxZoom: 19
-                }).addTo(map);
-            } else {
-                map.removeLayer(currentTileLayer);
-                currentTileLayer = satelliteTileLayer.addTo(map);
-            }
-        });
+        // Function to setup map controls
+        function setupMapControls() {
+            if (!map) return;
+            
+            // Custom map controls
+            document.getElementById('zoomInBtn').addEventListener('click', function() {
+                map.zoomIn();
+            });
+            
+            document.getElementById('zoomOutBtn').addEventListener('click', function() {
+                map.zoomOut();
+            });
+            
+            document.getElementById('resetMapBtn').addEventListener('click', function() {
+                if (marker) {
+                    map.setView(marker.getLatLng(), 13);
+                } else {
+                    map.setView([20, 0], 3);
+                }
+            });
+            
+            document.getElementById('satelliteViewBtn').addEventListener('click', function() {
+                if (map.hasLayer(satelliteTileLayer)) {
+                    map.removeLayer(satelliteTileLayer);
+                    currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+                } else {
+                    map.removeLayer(currentTileLayer);
+                    currentTileLayer = satelliteTileLayer.addTo(map);
+                }
+            });
+        }
         
         // Create marker variable
         let marker = null;
@@ -567,6 +594,40 @@
         // Load recent searches on page load
         loadRecentSearches();
         
+        // Function to restore page state from URL or session
+        function restorePageState() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const locationParam = urlParams.get('location');
+            
+            // Check URL parameters first (highest priority)
+            if (locationParam) {
+                document.getElementById('destination').value = decodeURIComponent(locationParam);
+                
+                // Short timeout ensures proper page rendering before search execution
+                setTimeout(() => {
+                    console.log("Restoring search from URL parameter:", locationParam);
+                    form.dispatchEvent(new Event('submit'));
+                }, 100);
+                return true;
+            }
+            
+            // Then check session storage (for back navigation)
+            const lastSearch = sessionStorage.getItem('lastSearch');
+            if (lastSearch && isBackNavigation) {
+                document.getElementById('destination').value = lastSearch;
+                
+                // Short timeout ensures proper page rendering before search execution
+                setTimeout(() => {
+                    console.log("Restoring search from session:", lastSearch);
+                    form.dispatchEvent(new Event('submit'));
+                }, 100);
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Handle search form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -578,94 +639,132 @@
                 return;
             }
             
+            // Save to session storage for back navigation
+            sessionStorage.setItem('lastSearch', address);
+            
+            // Update URL without reloading page
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('location', address);
+            window.history.pushState({location: address}, '', newUrl);
+            
             // Save to search history
             saveToSearchHistory(address);
             
             // Show loading state and map section
-            loadingIndicator.style.display = 'flex';
             mapSection.style.display = 'block';
+            
+            // Initialize map if not yet initialized
+            if (!map) {
+                map = initMap();
+                setupMapControls();
+            }
             
             // Force map resize when displayed
             setTimeout(function() {
-                map.invalidateSize(true);
+                if (map) map.invalidateSize(true);
             }, 10);
             
             // Scroll to map section
             mapSection.scrollIntoView({ behavior: 'smooth' });
             
+            // Check if this result is in cache
+            if (resultCache.has(address)) {
+                console.log("Using cached result for:", address);
+                const cachedResult = resultCache.get(address);
+                processLocationResult(cachedResult, address);
+                return;
+            }
+            
             // Use Nominatim service for geocoding (address to coordinates)
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Hide loading state
-                    loadingIndicator.style.display = 'none';
-                    
+                    // Cache the result
                     if (data && data.length > 0) {
-                        // Get first result
-                        const result = data[0];
-                        const lat = parseFloat(result.lat);
-                        const lon = parseFloat(result.lon);
-                        
-                        // Update location title
-                        document.getElementById('locationTitle').textContent = result.display_name;
-                        
-                        // Clear previous marker
-                        if (marker) {
-                            map.removeLayer(marker);
-                        }
-                        
-                        // Create custom icon for a more attractive marker
-                        const customIcon = L.divIcon({
-                            className: 'custom-map-marker',
-                            html: `<div class="marker-pin" style="background-color: var(--primary-color); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 15],
-                            popupAnchor: [0, -15]
-                        });
-                        
-                        // Add new marker with custom icon
-                        marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
-                        marker.bindPopup(`
-                            <div class="map-popup">
-                                <h6>${result.display_name}</h6>
-                                <p class="text-muted small mb-1">Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}</p>
-                                <button class="btn btn-sm btn-outline-primary mt-2" onclick="document.getElementById('saveToItineraryBtn').click()">
-                                    <i class="fas fa-bookmark me-1"></i> Save
-                                </button>
-                            </div>
-                        `, {
-                            maxWidth: 300,
-                            minWidth: 200
-                        }).openPopup();
-                        
-                        // Center and zoom map
-                        map.setView([lat, lon], 13);
-                        
-                        // Force map resize again after centering
-                        setTimeout(function() {
-                            map.invalidateSize(true);
-                        }, 100);
-                        
-                        // Show AI recommendations section
-                        aiRecommendationsSection.style.display = 'block';
-                        
-                        // Get AI recommendations for this location
-                        getAIRecommendations(result.display_name);
-                    } else {
-                        alert('Location not found. Please try a more detailed address');
+                        resultCache.set(address, data);
                     }
+                    processLocationResult(data, address);
                 })
                 .catch(error => {
                     console.error('Address lookup error:', error);
-                    loadingIndicator.style.display = 'none';
                     alert('Address lookup failed. Please try again later');
                 });
         });
         
+        // Process location search result
+        function processLocationResult(data, address) {
+            if (data && data.length > 0) {
+                // Get first result
+                const result = data[0];
+                const lat = parseFloat(result.lat);
+                const lon = parseFloat(result.lon);
+                
+                // Update location title
+                document.getElementById('locationTitle').textContent = result.display_name;
+                
+                // Clear previous marker
+                if (marker && map) {
+                    map.removeLayer(marker);
+                }
+                
+                // Create custom icon for a more attractive marker
+                const customIcon = L.divIcon({
+                    className: 'custom-map-marker',
+                    html: `<div class="marker-pin" style="background-color: var(--primary-color); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    popupAnchor: [0, -15]
+                });
+                
+                // Add new marker with custom icon
+                marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
+                marker.bindPopup(`
+                    <div class="map-popup">
+                        <h6>${result.display_name}</h6>
+                        <p class="text-muted small mb-1">Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}</p>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="document.getElementById('saveToItineraryBtn').click()">
+                            <i class="fas fa-bookmark me-1"></i> Save
+                        </button>
+                    </div>
+                `, {
+                    maxWidth: 300,
+                    minWidth: 200
+                }).openPopup();
+                
+                // Center and zoom map
+                map.setView([lat, lon], 13);
+                
+                // Force map resize again after centering
+                setTimeout(function() {
+                    if (map) map.invalidateSize(true);
+                }, 100);
+                
+                // Show AI recommendations section
+                aiRecommendationsSection.style.display = 'block';
+                
+                // Get AI recommendations for this location
+                getAIRecommendations(result.display_name, address);
+            } else {
+                alert('Location not found. Please try a more detailed address');
+            }
+        }
+        
+        // Cache for API responses
+        const aiRecommendationCache = new Map();
+        
         // Function to get AI recommendations for a location
-        function getAIRecommendations(location) {
+        function getAIRecommendations(displayName, searchQuery) {
             const aiRecommendationsContent = document.getElementById('aiRecommendationsContent');
             const aiLoadingIndicator = document.getElementById('aiLoadingIndicator');
+            
+            // Check if we have this recommendation in cache
+            const cacheKey = displayName || searchQuery;
+            if (aiRecommendationCache.has(cacheKey)) {
+                console.log("Using cached AI recommendation for:", cacheKey);
+                const cachedData = aiRecommendationCache.get(cacheKey);
+                displayAIRecommendation(cachedData);
+                return;
+            }
             
             // Show loading indicator
             aiLoadingIndicator.style.display = 'block';
@@ -679,7 +778,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ location: location })
+                body: JSON.stringify({ location: displayName || searchQuery })
             })
             .then(response => {
                 if (!response.ok) {
@@ -691,20 +790,9 @@
                 return response.json();
             })
             .then(data => {
-                // Hide loading indicator
-                aiLoadingIndicator.style.display = 'none';
-                
-                // Display the AI-generated content from backend
-                if (data && data.success && data.recommendation) {
-                    // Parse markdown to HTML using marked.js
-                    const parsedContent = marked.parse(data.recommendation);
-                    
-                    // Display the formatted content
-                    aiRecommendationsContent.innerHTML = parsedContent;
-                } else {
-                    console.error('Unexpected API response structure:', data);
-                    throw new Error(data.message || 'Invalid API response structure');
-                }
+                // Cache the response
+                aiRecommendationCache.set(cacheKey, data);
+                displayAIRecommendation(data);
             })
             .catch(error => {
                 console.error('AI recommendation error:', error);
@@ -720,6 +808,43 @@
                 `;
             });
         }
+        
+        // Function to display AI recommendation
+        function displayAIRecommendation(data) {
+            const aiRecommendationsContent = document.getElementById('aiRecommendationsContent');
+            const aiLoadingIndicator = document.getElementById('aiLoadingIndicator');
+            
+            // Hide loading indicator
+            aiLoadingIndicator.style.display = 'none';
+            
+            // Display the AI-generated content from backend
+            if (data && data.success && data.recommendation) {
+                // Parse markdown to HTML using marked.js
+                const parsedContent = marked.parse(data.recommendation);
+                
+                // Display the formatted content
+                aiRecommendationsContent.innerHTML = parsedContent;
+            } else {
+                console.error('Unexpected API response structure:', data);
+                aiRecommendationsContent.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to get AI suggestions at this time. Please try again later.<br>
+                        <small class="text-muted">(Error: Invalid API response structure)</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Handle page visibility changes
+        document.addEventListener("visibilitychange", function() {
+            if (!document.hidden && map) {
+                // When page becomes visible again, refresh the map
+                setTimeout(function() {
+                    map.invalidateSize(true);
+                }, 200);
+            }
+        });
         
         // Handle Save to Itinerary button
         document.getElementById('saveToItineraryBtn').addEventListener('click', function() {
@@ -743,7 +868,7 @@
         document.getElementById('shareRecommendationsBtn').addEventListener('click', function() {
             // Generate a shareable link (this would normally involve some server-side processing)
             // For demo purposes, we'll just use the current URL
-            const shareUrl = window.location.href + '?location=' + encodeURIComponent(document.getElementById('destination').value);
+            const shareUrl = window.location.href;
             document.getElementById('shareLink').value = shareUrl;
             
             // Show modal using Bootstrap's modal API
@@ -765,6 +890,101 @@
                 copyBtn.innerHTML = originalHTML;
             }, 2000);
         });
+        
+        // Enhanced page state management for better back navigation performance
+        const pageStateManager = {
+            save: function(location, mapData, aiData) {
+                // Store comprehensive state data to session storage
+                const stateData = {
+                    location: location,
+                    timestamp: Date.now(),
+                    mapPosition: map ? {
+                        lat: map.getCenter().lat,
+                        lng: map.getCenter().lng,
+                        zoom: map.getZoom()
+                    } : null,
+                    hasSearched: true
+                };
+                
+                // Use session storage for temporary navigation data
+                sessionStorage.setItem('locationPageState', JSON.stringify(stateData));
+                console.log("Saved page state for:", location);
+            },
+            
+            restore: function() {
+                try {
+                    const stateData = JSON.parse(sessionStorage.getItem('locationPageState'));
+                    if (!stateData) return false;
+                    
+                    console.log("Restoring page state from cache, location:", stateData.location);
+                    
+                    // Restore search input
+                    if (stateData.location) {
+                        document.getElementById('destination').value = stateData.location;
+                    }
+                    
+                    // Using a more efficient approach for restoration
+                    if (resultCache.has(stateData.location)) {
+                        // Show UI elements early to improve perceived performance
+                        mapSection.style.display = 'block';
+                        aiRecommendationsSection.style.display = 'block';
+                        
+                        // Defer the heavy processing to not block rendering
+                        setTimeout(() => {
+                            const cachedResult = resultCache.get(stateData.location);
+                            processLocationResult(cachedResult, stateData.location, stateData.mapPosition);
+                        }, 10);
+                        return true;
+                    } else if (stateData.location) {
+                        // If we have a location but no cache, just re-submit the search with minimal delay
+                        setTimeout(() => {
+                            form.dispatchEvent(new Event('submit'));
+                        }, 50);
+                        return true;
+                    }
+                } catch (error) {
+                    console.error("Error restoring page state:", error);
+                }
+                return false;
+            }
+        };
+        
+        // Handle browser history navigation with improved performance
+        window.addEventListener('popstate', function(event) {
+            console.log("Navigation detected, state:", event.state);
+            
+            // Try restoring from our enhanced state manager first (faster)
+            if (!pageStateManager.restore()) {
+                // Fall back to simpler state if available
+                if (event.state && event.state.location) {
+                    document.getElementById('destination').value = event.state.location;
+                    form.dispatchEvent(new Event('submit'));
+                }
+            }
+        });
+        
+        // Modify form submission to use our state manager
+        const originalFormSubmit = form.onsubmit;
+        form.addEventListener('submit', function(e) {
+            // Get address immediately to use in state management
+            const address = document.getElementById('destination').value.trim();
+            if (address) {
+                // Save state immediately for better back navigation
+                pageStateManager.save(address);
+            }
+        }, false);
+        
+        // Try to restore previous state if applicable - with improved performance
+        if (isBackNavigation) {
+            console.log("Back navigation detected, using optimized restoration");
+            if (!pageStateManager.restore()) {
+                console.log("Falling back to standard restoration");
+                const restored = restorePageState();
+                if (restored) {
+                    console.log("Successfully restored previous state");
+                }
+            }
+        }
     });
 </script>
 {% endblock %}

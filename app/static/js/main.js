@@ -255,8 +255,7 @@ function initEnhancedUI() {
     // NEW: Add smooth scrolling for anchor links
     enableSmoothScrolling();
     
-    // NEW: Add loading indicator for page transitions
-    enableLoadingIndicator();
+    // 删除了加载指示器 - enableLoadingIndicator();
 }
 
 /**
@@ -403,56 +402,6 @@ function enableSmoothScrolling() {
                 // Update URL hash without jumping
                 history.pushState(null, null, targetId);
             }
-        });
-    });
-}
-
-/**
- * Add loading indicator for page transitions
- */
-function enableLoadingIndicator() {
-    // Add loading indicator to all links except anchors and javascript links
-    document.querySelectorAll('a:not([href^="#"]):not([href^="javascript"]):not([target="_blank"])').forEach(link => {
-        link.addEventListener('click', function(e) {
-            // Don't intercept if modified click (new tab, etc)
-            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-            
-            e.preventDefault();
-            
-            // Create loading overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'loading-overlay';
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-            overlay.style.zIndex = '9999';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.transition = 'opacity 0.3s';
-            overlay.style.opacity = '0';
-            
-            // Create spinner
-            const spinner = document.createElement('div');
-            spinner.className = 'spinner-border text-primary';
-            spinner.setAttribute('role', 'status');
-            
-            // Append spinner to overlay
-            overlay.appendChild(spinner);
-            document.body.appendChild(overlay);
-            
-            // Fade in overlay
-            setTimeout(() => {
-                overlay.style.opacity = '1';
-            }, 10);
-            
-            // Navigate to link destination
-            setTimeout(() => {
-                window.location.href = this.href;
-            }, 300);
         });
     });
 }

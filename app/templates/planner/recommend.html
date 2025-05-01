@@ -104,6 +104,120 @@
         width: 100% !important;
         z-index: 10;
     }
+    .actions-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1.5rem;
+    }
+    .actions-toolbar .btn {
+        margin-left: 0.5rem;
+    }
+    .btn-save {
+        background-color: var(--success-color, #28a745);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .btn-save:hover {
+        background-color: var(--success-hover-color, #218838);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .btn-print {
+        background-color: var(--secondary-color, #6c757d);
+        color: white;
+    }
+    .btn-print:hover {
+        background-color: var(--secondary-hover-color, #5a6268);
+    }
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: white;
+        color: #333;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        z-index: 1050;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+    .toast-notification.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .toast-icon {
+        margin-right: 10px;
+        color: var(--success-color, #28a745);
+        font-size: 1.5rem;
+    }
+    .map-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 900;
+        display: flex;
+        flex-direction: column;
+    }
+    .map-control-btn {
+        background: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .map-control-btn:hover {
+        background: #f0f0f0;
+        transform: scale(1.05);
+    }
+    .search-history {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        margin-top: 10px;
+    }
+    .search-history.open {
+        max-height: 200px;
+    }
+    .recent-search-item {
+        cursor: pointer;
+        padding: 6px 12px;
+        margin: 5px 0;
+        background: #f8f9fa;
+        border-radius: 20px;
+        display: inline-block;
+        transition: all 0.2s ease;
+    }
+    .recent-search-item:hover {
+        background: #e9ecef;
+    }
+    
+    /* Improved mobile responsiveness */
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 3rem 0;
+        }
+        .cards-container {
+            margin-top: -30px;
+        }
+        #recommendationMap {
+            height: 400px !important;
+        }
+        .actions-toolbar {
+            flex-direction: column;
+        }
+        .actions-toolbar .btn {
+            margin-left: 0;
+            margin-bottom: 0.5rem;
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -126,6 +240,18 @@
                     </div>
                     <div class="invalid-feedback text-white">Please enter a valid location</div>
                 </form>
+                
+                <!-- Search History - New Feature -->
+                <div class="search-history mt-3" id="searchHistory">
+                    <p class="text-white-50 small mb-2">Recent searches:</p>
+                    <div id="recentSearches" class="d-flex flex-wrap justify-content-center">
+                        <!-- Recent searches will be added here dynamically -->
+                    </div>
+                </div>
+                
+                <button class="btn btn-sm btn-link text-white mt-2" id="toggleSearchHistory">
+                    <i class="fas fa-history me-1"></i> Recent Searches
+                </button>
             </div>
         </div>
         <div class="scroll-indicator" id="scrollIndicator">
@@ -179,6 +305,21 @@
         <div class="card shadow-sm" style="border-radius: 0; border: none;">
             <div class="card-body p-0">
                 <div id="recommendationMap"></div>
+                <!-- Map Controls -->
+                <div class="map-controls">
+                    <button class="map-control-btn" id="zoomInBtn" title="Zoom In">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="map-control-btn" id="zoomOutBtn" title="Zoom Out">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="map-control-btn" id="resetMapBtn" title="Reset View">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="map-control-btn" id="satelliteViewBtn" title="Toggle Satellite View">
+                        <i class="fas fa-satellite"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -190,7 +331,22 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
-                    <h3 class="mb-3 fw-bold" id="locationTitle">Location Details</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="fw-bold mb-0" id="locationTitle">Location Details</h3>
+                        <!-- Action Buttons -->
+                        <div class="actions-toolbar">
+                            <button class="btn btn-save" id="saveToItineraryBtn" title="Save to Itinerary">
+                                <i class="fas fa-bookmark me-2"></i> Save to Itinerary
+                            </button>
+                            <button class="btn btn-print" id="printRecommendationsBtn" title="Print">
+                                <i class="fas fa-print me-2"></i> Print
+                            </button>
+                            <button class="btn btn-outline-primary" id="shareRecommendationsBtn" title="Share">
+                                <i class="fas fa-share-alt me-2"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
                     <div id="aiRecommendationsContent" class="ai-suggestion mb-4">
                         <!-- AI suggestions will appear here -->
                     </div>
@@ -202,6 +358,55 @@
                             <span>Getting suggestions...</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-notification" id="toastNotification">
+    <div class="toast-icon">
+        <i class="fas fa-check-circle"></i>
+    </div>
+    <div class="toast-content">Successfully saved to your itinerary!</div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shareModalLabel">Share Recommendations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="shareLink" class="form-label">Share Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareLink" readonly>
+                        <button class="btn btn-outline-secondary" id="copyLinkBtn">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-outline-primary mx-1">
+                        <i class="fab fa-facebook-f"></i>
+                    </button>
+                    <button class="btn btn-outline-primary mx-1">
+                        <i class="fab fa-twitter"></i>
+                    </button>
+                    <button class="btn btn-outline-success mx-1">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                    <button class="btn btn-outline-primary mx-1">
+                        <i class="fab fa-telegram-plane"></i>
+                    </button>
+                    <button class="btn btn-outline-danger mx-1">
+                        <i class="fab fa-pinterest"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -232,7 +437,7 @@
         
         // Create map options with all controls explicitly enabled
         const mapOptions = {
-            zoomControl: true,
+            zoomControl: false, // We'll add custom zoom controls
             attributionControl: true,
             scrollWheelZoom: true,
             dragging: true,
@@ -248,10 +453,16 @@
         const map = L.map('recommendationMap', mapOptions).setView([20, 0], 3);
         
         // Add OpenStreetMap tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        let currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
+        
+        // Define satellite tile layer
+        const satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        });
         
         // Force map to recalculate size multiple times to ensure proper rendering
         setTimeout(function() {
@@ -267,6 +478,36 @@
             map.invalidateSize(true);
         });
         
+        // Custom map controls
+        document.getElementById('zoomInBtn').addEventListener('click', function() {
+            map.zoomIn();
+        });
+        
+        document.getElementById('zoomOutBtn').addEventListener('click', function() {
+            map.zoomOut();
+        });
+        
+        document.getElementById('resetMapBtn').addEventListener('click', function() {
+            if (marker) {
+                map.setView(marker.getLatLng(), 13);
+            } else {
+                map.setView([20, 0], 3);
+            }
+        });
+        
+        document.getElementById('satelliteViewBtn').addEventListener('click', function() {
+            if (map.hasLayer(satelliteTileLayer)) {
+                map.removeLayer(satelliteTileLayer);
+                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(map);
+            } else {
+                map.removeLayer(currentTileLayer);
+                currentTileLayer = satelliteTileLayer.addTo(map);
+            }
+        });
+        
         // Create marker variable
         let marker = null;
         
@@ -275,6 +516,56 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
         const mapSection = document.getElementById('mapSection');
         const aiRecommendationsSection = document.getElementById('aiRecommendationsSection');
+        
+        // Recent Searches
+        const toggleSearchHistory = document.getElementById('toggleSearchHistory');
+        const searchHistory = document.getElementById('searchHistory');
+        const recentSearches = document.getElementById('recentSearches');
+        
+        toggleSearchHistory.addEventListener('click', function() {
+            searchHistory.classList.toggle('open');
+        });
+        
+        // Function to load and display recent searches
+        function loadRecentSearches() {
+            const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+            recentSearches.innerHTML = '';
+            
+            searches.forEach(search => {
+                const searchItem = document.createElement('span');
+                searchItem.className = 'recent-search-item me-2';
+                searchItem.textContent = search;
+                searchItem.addEventListener('click', function() {
+                    document.getElementById('destination').value = search;
+                    form.dispatchEvent(new Event('submit'));
+                });
+                recentSearches.appendChild(searchItem);
+            });
+            
+            // Show/hide toggle button based on search history
+            toggleSearchHistory.style.display = searches.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        // Function to save search to history
+        function saveToSearchHistory(search) {
+            const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+            // Remove if exists already (to avoid duplicates)
+            const index = searches.indexOf(search);
+            if (index > -1) {
+                searches.splice(index, 1);
+            }
+            // Add to beginning of array
+            searches.unshift(search);
+            // Limit to 5 recent searches
+            const limitedSearches = searches.slice(0, 5);
+            localStorage.setItem('recentSearches', JSON.stringify(limitedSearches));
+            
+            // Refresh display
+            loadRecentSearches();
+        }
+        
+        // Load recent searches on page load
+        loadRecentSearches();
         
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -286,6 +577,9 @@
                 alert('Please enter a valid location');
                 return;
             }
+            
+            // Save to search history
+            saveToSearchHistory(address);
             
             // Show loading state and map section
             loadingIndicator.style.display = 'flex';
@@ -320,13 +614,29 @@
                             map.removeLayer(marker);
                         }
                         
-                        // Add new marker
-                        marker = L.marker([lat, lon]).addTo(map);
+                        // Create custom icon for a more attractive marker
+                        const customIcon = L.divIcon({
+                            className: 'custom-map-marker',
+                            html: `<div class="marker-pin" style="background-color: var(--primary-color); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15],
+                            popupAnchor: [0, -15]
+                        });
+                        
+                        // Add new marker with custom icon
+                        marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
                         marker.bindPopup(`
                             <div class="map-popup">
                                 <h6>${result.display_name}</h6>
+                                <p class="text-muted small mb-1">Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}</p>
+                                <button class="btn btn-sm btn-outline-primary mt-2" onclick="document.getElementById('saveToItineraryBtn').click()">
+                                    <i class="fas fa-bookmark me-1"></i> Save
+                                </button>
                             </div>
-                        `).openPopup();
+                        `, {
+                            maxWidth: 300,
+                            minWidth: 200
+                        }).openPopup();
                         
                         // Center and zoom map
                         map.setView([lat, lon], 13);
@@ -410,6 +720,51 @@
                 `;
             });
         }
+        
+        // Handle Save to Itinerary button
+        document.getElementById('saveToItineraryBtn').addEventListener('click', function() {
+            // This would typically involve an AJAX call to save to the database
+            // For demo purposes, we'll just show the toast notification
+            const toast = document.getElementById('toastNotification');
+            toast.classList.add('show');
+            
+            // Hide after 3 seconds
+            setTimeout(function() {
+                toast.classList.remove('show');
+            }, 3000);
+        });
+        
+        // Handle Print button
+        document.getElementById('printRecommendationsBtn').addEventListener('click', function() {
+            window.print();
+        });
+        
+        // Handle Share button
+        document.getElementById('shareRecommendationsBtn').addEventListener('click', function() {
+            // Generate a shareable link (this would normally involve some server-side processing)
+            // For demo purposes, we'll just use the current URL
+            const shareUrl = window.location.href + '?location=' + encodeURIComponent(document.getElementById('destination').value);
+            document.getElementById('shareLink').value = shareUrl;
+            
+            // Show modal using Bootstrap's modal API
+            const shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
+            shareModal.show();
+        });
+        
+        // Handle copy link button
+        document.getElementById('copyLinkBtn').addEventListener('click', function() {
+            const shareLink = document.getElementById('shareLink');
+            shareLink.select();
+            document.execCommand('copy');
+            
+            // Change button text temporarily
+            const copyBtn = document.getElementById('copyLinkBtn');
+            const originalHTML = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(function() {
+                copyBtn.innerHTML = originalHTML;
+            }, 2000);
+        });
     });
 </script>
 {% endblock %}

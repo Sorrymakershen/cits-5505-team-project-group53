@@ -168,6 +168,178 @@
     .leaflet-control-container .leaflet-top {
         z-index: 999 !important;
     }
+
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 3px;
+        margin-left: -1.5px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 30px;
+        width: 50%;
+        box-sizing: border-box;
+        padding: 0 40px;
+    }
+    
+    .timeline-item.left {
+        left: 0;
+    }
+    
+    .timeline-item.right {
+        left: 50%;
+    }
+    
+    .timeline-badge {
+        position: absolute;
+        top: 0;
+        right: -12px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .timeline-item.right .timeline-badge {
+        right: auto;
+        left: -12px;
+    }
+    
+    .timeline-panel {
+        position: relative;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+    }
+    
+    .timeline-panel:after {
+        content: '';
+        position: absolute;
+        top: 10px;
+        right: -10px;
+        width: 0;
+        height: 0;
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+        border-left: 10px solid #fff;
+    }
+    
+    .timeline-item.right .timeline-panel:after {
+        right: auto;
+        left: -10px;
+        border-left: none;
+        border-right: 10px solid #fff;
+    }
+    
+    .timeline-title {
+        margin-top: 0;
+        font-size: 1.1rem;
+        color: #333;
+    }
+    
+    .timeline-body {
+        margin-top: 10px;
+    }
+    
+    @media (max-width: 767px) {
+        .timeline:before {
+            left: 40px;
+        }
+        
+        .timeline-item {
+            width: 100%;
+            padding-left: 70px;
+            padding-right: 0;
+        }
+        
+        .timeline-item.left, .timeline-item.right {
+            left: 0;
+        }
+        
+        .timeline-badge {
+            left: 28px;
+            right: auto;
+        }
+        
+        .timeline-panel:after {
+            right: auto;
+            left: -10px;
+            border-left: none;
+            border-right: 10px solid #fff;
+        }
+    }
+    
+    /* Radar chart styles */
+    .radar-chart-container {
+        position: relative;
+        height: 280px; /* Reduced height */
+        overflow: hidden;
+    }
+    
+    /* Table comparison styles */
+    .comparison-table th, .comparison-table td {
+        text-align: center;
+        font-size: 0.85rem; /* Smaller font for tables */
+        padding: 0.4rem; /* Reduced padding */
+    }
+    
+    .comparison-table th:first-child, .comparison-table td:first-child {
+        text-align: left;
+    }
+    
+    /* Fix height for visualization cards */
+    .visualization-card {
+        max-height: 450px;
+        overflow-y: auto;
+    }
+    
+    .visualization-card .card-body {
+        padding-bottom: 0.75rem;
+    }
+    
+    /* Expense chart container */
+    .expense-chart-container {
+        height: 280px; /* Fixed height */
+    }
+    
+    /* Insight boxes */
+    .insight-box {
+        padding: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .insight-box ul {
+        margin-bottom: 0;
+        padding-left: 1.25rem;
+    }
+    
+    /* Reduce space between sections */
+    .mb-5 {
+        margin-bottom: 2rem !important;
+    }
+    
+    .card-title {
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+    }
 </style>
 {% endblock %}
 
@@ -437,6 +609,160 @@
         </div>
     </div>
 </div>
+
+<!-- Enhanced Data Analysis Sections -->
+<section class="py-4">
+    <div class="container">
+        <h2 class="mb-4">Advanced Travel Insights</h2>
+        
+        <!-- NEW CHARTS: Monthly Expenses, Trip Duration Distribution, and Destination Frequency -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-bar me-2 text-primary"></i> Monthly Expenses</h4>
+                        <div id="monthlyExpensesChart" data-source="{{ url_for('statistics.get_monthly_expenses') }}" style="height: 300px;">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your monthly expenses...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-pie me-2 text-primary"></i> Trip Duration Distribution</h4>
+                        <div id="durationDistributionChart" data-source="{{ url_for('statistics.get_duration_distribution') }}" style="height: 300px;">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your trip durations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-5">
+            <div class="col-lg-12 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-map-marker-alt me-2 text-primary"></i> Top Destinations</h4>
+                        <div id="destinationFrequencyChart" data-source="{{ url_for('statistics.get_destination_frequency') }}" style="height: 350px;">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your favorite destinations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Travel Timeline -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-stream me-2 text-primary"></i> Your Travel Timeline</h4>
+                        <div id="travelTimeline" data-source="{{ url_for('statistics.get_travel_timeline') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading your travel timeline...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expense Chart and Destination Comparison -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100 visualization-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-pie me-2 text-primary"></i> Expense Visualization</h4>
+                        
+                        {% if stats.cost_breakdown %}
+                            <div id="expenseChart"
+                                data-categories='{{ stats.cost_breakdown.keys()|list|tojson }}'
+                                data-values='{{ stats.cost_breakdown.values()|list|tojson }}'>
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Generating expense chart...</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i> Add costs to your travel plans to see expense visualizations.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100 visualization-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-radar me-2 text-primary"></i> Destination Comparison</h4>
+                        <div id="destinationComparison" data-source="{{ url_for('statistics.get_destination_comparison') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your destinations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Travel Trend Analysis and Heat Map -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-chart-line me-2 text-primary"></i> Travel Trends</h4>
+                        <div id="trendAnalysis" data-source="{{ url_for('statistics.get_trend_analysis') }}">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing your travel trends...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4"><i class="fas fa-globe me-2 text-primary"></i> Travel Heatmap</h4>
+                        {% if home_address %}
+                            <div id="travelHeatmap" class="map-container"></div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i> Set your home location to view travel intensity heatmap.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}
@@ -859,105 +1185,3 @@
     }
 </script>
 {% endblock %}
-
-<!-- Enhanced Data Analysis Sections -->
-<section class="py-4">
-    <div class="container">
-        <h2 class="mb-4">Advanced Travel Insights</h2>
-        
-        <!-- Travel Timeline -->
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-stream me-2 text-primary"></i> Your Travel Timeline</h4>
-                        <div id="travelTimeline" data-source="{{ url_for('statistics.get_travel_timeline') }}">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Loading your travel timeline...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Expense Chart and Destination Comparison -->
-        <div class="row mb-5">
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-chart-pie me-2 text-primary"></i> Expense Visualization</h4>
-                        
-                        {% if stats.cost_breakdown %}
-                            <div id="expenseChart"
-                                data-categories='{{ stats.cost_breakdown.keys()|list|tojson }}'
-                                data-values='{{ stats.cost_breakdown.values()|list|tojson }}'>
-                                <div class="text-center py-4">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                    <p class="mt-2">Generating expense chart...</p>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i> Add costs to your travel plans to see expense visualizations.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-chart-radar me-2 text-primary"></i> Destination Comparison</h4>
-                        <div id="destinationComparison" data-source="{{ url_for('statistics.get_destination_comparison') }}">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Analyzing your destinations...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Travel Trend Analysis and Heat Map -->
-        <div class="row mb-5">
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-chart-line me-2 text-primary"></i> Travel Trends</h4>
-                        <div id="trendAnalysis" data-source="{{ url_for('statistics.get_trend_analysis') }}">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Analyzing your travel trends...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-globe me-2 text-primary"></i> Travel Heatmap</h4>
-                        {% if home_address %}
-                            <div id="travelHeatmap" class="map-container"></div>
-                        {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i> Set your home location to view travel intensity heatmap.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>

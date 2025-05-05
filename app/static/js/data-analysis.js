@@ -10,13 +10,13 @@ function initDataVisualizations() {
     // Initialize expense breakdown chart
     initExpenseChart();
     
-    // NEW: Initialize monthly expenses chart
+    // Initialize monthly expenses chart
     initMonthlyExpensesChart();
     
-    // NEW: Initialize trip duration distribution chart
+    // Initialize trip duration distribution chart
     initDurationDistributionChart();
     
-    // NEW: Initialize destination frequency chart
+    // Initialize destination frequency chart
     initDestinationFrequencyChart();
     
     // Initialize travel timeline
@@ -24,14 +24,6 @@ function initDataVisualizations() {
     
     // Initialize destination comparison
     initDestinationComparison();
-    
-    // Initialize travel heatmap if we have the data
-    if (typeof travelData !== 'undefined' && travelData.destinations) {
-        initTravelHeatmap(travelData.destinations);
-    }
-    
-    // Initialize trend analysis
-    initTrendAnalysis();
 }
 
 /**
@@ -42,30 +34,21 @@ function initExpenseChart() {
     if (!chartContainer) return;
     
     // Get data from the container's data attributes or fetch from API
-    const dataSource = chartContainer.getAttribute('data-source');
+    const dataSource = chartContainer.getAttribute('data-source') || '/api/expenses/by-trip';
     
-    if (dataSource) {
-        fetchDataForVisualization(dataSource)
-            .then(data => {
-                renderExpenseChart(chartContainer, data);
-            })
-            .catch(error => {
-                chartContainer.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Failed to load expense data
-                    </div>
-                `;
-            });
-    } else {
-        // Use inline data if available
-        const categories = JSON.parse(chartContainer.getAttribute('data-categories') || '[]');
-        const values = JSON.parse(chartContainer.getAttribute('data-values') || '[]');
-        
-        if (categories.length > 0 && values.length > 0) {
-            renderExpenseChart(chartContainer, { categories, values });
-        }
-    }
+    // Always fetch from API to get expenses by trip
+    fetchDataForVisualization(dataSource)
+        .then(data => {
+            renderExpenseChart(chartContainer, data);
+        })
+        .catch(error => {
+            chartContainer.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Failed to load expense data: ${error.message || 'Unknown error'}
+                </div>
+            `;
+        });
 }
 
 /**
@@ -76,41 +59,37 @@ function initExpenseChart() {
 function renderExpenseChart(container, data) {
     console.log("Rendering expense chart");
     
-    // Ensure we have categories and values
-    if (!data.categories || !data.values || 
-        !Array.isArray(data.categories) || !Array.isArray(data.values) || 
-        data.categories.length === 0 || data.values.length === 0) {
-        
+    // Check if we have trip data
+    if (!data.trips || !Array.isArray(data.trips) || data.trips.length === 0) {
         container.innerHTML = `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                No expense data available yet. Add travel expenses to see category breakdown.
+                No expense data available yet. Add travel expenses to see category breakdown by trip.
             </div>
         `;
         return;
     }
     
-    // Performance optimization: Limit categories if there are too many
-    if (data.categories.length > 7) {
-        // Find the smallest categories and combine them into "Other"
-        const sortedIndices = [...data.values.keys()].sort((a, b) => data.values[a] - data.values[b]);
-        const otherIndices = sortedIndices.slice(0, data.categories.length - 6);
-        const otherValue = otherIndices.reduce((sum, i) => sum + data.values[i], 0);
-        
-        // Create new arrays without the smallest categories
-        const newCategories = data.categories.filter((_, i) => !otherIndices.includes(i));
-        const newValues = data.values.filter((_, i) => !otherIndices.includes(i));
-        
-        // Add the "Other" category
-        newCategories.push("Other");
-        newValues.push(otherValue);
-        
-        data.categories = newCategories;
-        data.values = newValues;
-    }
-    
     // Clear container
     container.innerHTML = '';
+    
+    // Create trip selector
+    const selectorDiv = document.createElement('div');
+    selectorDiv.className = 'mb-3';
+    
+    let selectorHtml = `
+        <label for="tripSelector" class="form-label">Select Trip:</label>
+        <select class="form-select form-select-sm" id="tripSelector">
+            <option value="all" selected>All Trips</option>
+    `;
+    
+    data.trips.forEach(trip => {
+        selectorHtml += `<option value="${trip.id}">${trip.title || 'Untitled Trip'}</option>`;
+    });
+    
+    selectorHtml += `</select>`;
+    selectorDiv.innerHTML = selectorHtml;
+    container.appendChild(selectorDiv);
     
     // Create fixed-height expense chart container
     const chartContainer = document.createElement('div');
@@ -121,81 +100,139 @@ function renderExpenseChart(container, data) {
     const canvas = document.createElement('canvas');
     chartContainer.appendChild(canvas);
     
-    // Define pie chart colors
-    const backgroundColors = [
-        'rgba(54, 162, 235, 0.7)',  // Blue
-        'rgba(255, 99, 132, 0.7)',   // Red
-        'rgba(255, 206, 86, 0.7)',   // Yellow
-        'rgba(75, 192, 192, 0.7)',   // Green
-        'rgba(153, 102, 255, 0.7)',  // Purple
-        'rgba(255, 159, 64, 0.7)',   // Orange
-        'rgba(199, 199, 199, 0.7)'   // Gray
-    ];
+    // Initialize chart with "All Trips" data
+    const chart = createExpenseChart(canvas, data.aggregated);
     
-    try {
-        // Create pie chart
-        new Chart(canvas, {
-            type: 'pie',
-            data: {
-                labels: data.categories,
-                datasets: [{
-                    data: data.values,
-                    backgroundColor: backgroundColors.slice(0, data.categories.length),
-                    borderWidth: 1,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            font: {
-                                size: 11 // Smaller font size
-                            },
-                            padding: 10 // Reduced padding
+    // Add event listener for trip selection
+    document.getElementById('tripSelector').addEventListener('change', function() {
+        const tripId = this.value;
+        let chartData;
+        
+        if (tripId === 'all') {
+            chartData = data.aggregated;
+        } else {
+            const selectedTrip = data.trips.find(t => t.id.toString() === tripId);
+            chartData = selectedTrip ? selectedTrip.expenses : { categories: [], values: [] };
+        }
+        
+        // Update chart with selected trip data
+        updateExpenseChart(chart, chartData);
+        
+        // Update summary
+        updateExpenseSummary(container, chartData);
+    });
+    
+    // Add initial summary
+    updateExpenseSummary(container, data.aggregated);
+    
+    function createExpenseChart(canvas, chartData) {
+        // Define pie chart colors
+        const backgroundColors = [
+            'rgba(54, 162, 235, 0.7)',  // Blue
+            'rgba(255, 99, 132, 0.7)',   // Red
+            'rgba(255, 206, 86, 0.7)',   // Yellow
+            'rgba(75, 192, 192, 0.7)',   // Green
+            'rgba(153, 102, 255, 0.7)',  // Purple
+            'rgba(255, 159, 64, 0.7)',   // Orange
+            'rgba(199, 199, 199, 0.7)'   // Gray
+        ];
+        
+        try {
+            // Check if we have data
+            if (!chartData.categories || !chartData.values || chartData.categories.length === 0) {
+                return null;
+            }
+            
+            // Create pie chart
+            return new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: chartData.categories,
+                    datasets: [{
+                        data: chartData.values,
+                        backgroundColor: backgroundColors.slice(0, chartData.categories.length),
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 11 // Smaller font size
+                                },
+                                padding: 10 // Reduced padding
+                            }
                         },
-                        // Limit the number of legend items shown
-                        maxItems: 6
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((value / total) * 100);
-                                return `$${value.toFixed(2)} (${percentage}%)`;
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `$${value.toFixed(2)} (${percentage}%)`;
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error creating expense chart:", error);
+            canvas.parentNode.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error rendering expense chart: ${error.message}
+                </div>
+            `;
+            return null;
+        }
+    }
+    
+    function updateExpenseChart(chart, chartData) {
+        if (!chart || !chartData.categories || !chartData.values) return;
+        
+        chart.data.labels = chartData.categories;
+        chart.data.datasets[0].data = chartData.values;
+        chart.update();
+    }
+    
+    function updateExpenseSummary(container, chartData) {
+        // Remove existing summary
+        const existingSummary = container.querySelector('.expense-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+        
+        if (!chartData.categories || !chartData.values || chartData.values.length === 0) {
+            const noDataDiv = document.createElement('div');
+            noDataDiv.className = 'expense-summary alert alert-info';
+            noDataDiv.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                No expense data for the selected trip.
+            `;
+            container.appendChild(noDataDiv);
+            return;
+        }
         
         // Add compact total and max expense category
-        const totalExpense = data.values.reduce((sum, value) => sum + value, 0);
-        const maxExpenseIndex = data.values.indexOf(Math.max(...data.values));
-        const maxExpenseCategory = data.categories[maxExpenseIndex];
-        const maxExpense = data.values[maxExpenseIndex];
+        const totalExpense = chartData.values.reduce((sum, value) => sum + value, 0);
+        const maxExpenseIndex = chartData.values.indexOf(Math.max(...chartData.values));
+        const maxExpenseCategory = chartData.categories[maxExpenseIndex];
+        const maxExpense = chartData.values[maxExpenseIndex];
         const maxExpensePercentage = Math.round((maxExpense / totalExpense) * 100);
         
         const summaryDiv = document.createElement('div');
-        summaryDiv.className = 'insight-box alert alert-light py-1 px-2 small';
+        summaryDiv.className = 'expense-summary insight-box alert alert-light py-1 px-2 small mt-3';
         summaryDiv.innerHTML = `
             <div class="fw-bold mb-1">Total: $${totalExpense.toFixed(2)}</div>
             <div>Largest: ${maxExpenseCategory} ($${maxExpense.toFixed(2)}, ${maxExpensePercentage}%)</div>
         `;
         container.appendChild(summaryDiv);
-    } catch (error) {
-        console.error("Error creating expense chart:", error);
-        container.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Error rendering expense chart: ${error.message}
-            </div>
-        `;
     }
 }
 
@@ -637,7 +674,7 @@ function renderTravelTimeline(container, data) {
     let trips = [...data.trips]; // Create a copy
     
     // Sort trips by start date (newest first)
-    trips.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+    trips.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
     
     // Limit to 10 most recent trips to prevent browser freezing
     if (trips.length > 10) {
@@ -655,9 +692,92 @@ function renderTravelTimeline(container, data) {
         container.innerHTML = ''; // Clear container
     }
     
-    // Create timeline HTML
-    let html = '<div class="timeline">';
+    // Create horizontal timeline container
+    const timelineContainer = document.createElement('div');
+    timelineContainer.className = 'horizontal-timeline';
+    container.appendChild(timelineContainer);
     
+    // Add CSS styles for horizontal timeline
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        .horizontal-timeline {
+            position: relative;
+            padding: 20px 0;
+            width: 100%;
+            margin: 0 auto;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .timeline-track {
+            position: relative;
+            height: 4px;
+            background-color: #e9ecef;
+            margin: 0 40px;
+            min-width: max-content;
+        }
+        .timeline-events {
+            position: relative;
+            padding-top: 40px;
+            margin-left: 40px;
+        }
+        .timeline-event {
+            position: absolute;
+            transform: translateX(-50%);
+            display: inline-block;
+        }
+        .timeline-point {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #007bff;
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+        .timeline-content {
+            position: relative;
+            width: 200px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            text-align: center;
+            margin-top: 15px;
+            white-space: normal;
+        }
+        .timeline-content h5 {
+            margin-top: 0;
+            font-size: 1rem;
+        }
+        .timeline-content p {
+            margin: 5px 0;
+            font-size: 0.8rem;
+        }
+    `;
+    document.head.appendChild(styleEl);
+    
+    // Create timeline track
+    const track = document.createElement('div');
+    track.className = 'timeline-track';
+    timelineContainer.appendChild(track);
+    
+    // Create timeline events container
+    const eventsContainer = document.createElement('div');
+    eventsContainer.className = 'timeline-events';
+    timelineContainer.appendChild(eventsContainer);
+    
+    // Calculate total timeline width based on trip count
+    const timelineWidth = Math.max(trips.length * 250, 800); // At least 800px or 250px per trip
+    track.style.width = `${timelineWidth}px`;
+    
+    // Calculate earliest and latest dates
+    const dates = trips.map(trip => new Date(trip.start_date));
+    const earliestDate = new Date(Math.min(...dates));
+    const latestDate = new Date(Math.max(...dates.map((_, i) => new Date(trips[i].end_date))));
+    
+    // Add each trip to the timeline
     trips.forEach((trip, index) => {
         // Validate date fields
         let startDate, endDate, duration;
@@ -677,35 +797,38 @@ function renderTravelTimeline(container, data) {
             duration = 0;
         }
         
-        // Alternate left/right for timeline items
-        const position = index % 2 === 0 ? 'left' : 'right';
+        // Calculate position on timeline (percentage)
+        const totalDays = (latestDate - earliestDate) / (1000 * 60 * 60 * 24);
+        const daysSinceStart = (startDate - earliestDate) / (1000 * 60 * 60 * 24);
+        const position = totalDays > 0 ? (daysSinceStart / totalDays) * 100 : (index / Math.max(trips.length - 1, 1)) * 100;
         
-        html += `
-            <div class="timeline-item ${position}">
-                <div class="timeline-badge bg-primary">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div class="timeline-panel">
-                    <div class="timeline-heading">
-                        <h5 class="timeline-title">${trip.title || 'Untitled Trip'}</h5>
-                        <p class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>
-                            ${formatDate(startDate)} - ${formatDate(endDate)}
-                            <span class="badge bg-light text-dark ms-2">${duration} days</span>
-                        </p>
-                    </div>
-                    <div class="timeline-body">
-                        <p class="mb-1"><strong>${trip.destination || 'Unknown Destination'}</strong></p>
-                        ${trip.description ? `<p class="text-muted small">${trip.description.substring(0, 150)}${trip.description.length > 150 ? '...' : ''}</p>` : ''}
-                        ${trip.budget ? `<div class="mt-2"><span class="badge bg-success">Budget: $${trip.budget}</span></div>` : ''}
-                    </div>
-                </div>
-            </div>
+        // Create timeline event
+        const event = document.createElement('div');
+        event.className = 'timeline-event';
+        event.style.left = `${position}%`;
+        
+        // Create timeline point
+        const point = document.createElement('div');
+        point.className = 'timeline-point';
+        event.appendChild(point);
+        
+        // Create content card
+        const content = document.createElement('div');
+        content.className = 'timeline-content';
+        content.innerHTML = `
+            <h5>${trip.title || 'Untitled Trip'}</h5>
+            <p class="text-muted">
+                <i class="fas fa-calendar me-1"></i>
+                ${formatDate(startDate)} - ${formatDate(endDate)}
+                <span class="badge bg-light text-dark ms-2">${duration} days</span>
+            </p>
+            <p><strong>${trip.destination || 'Unknown Destination'}</strong></p>
+            ${trip.budget ? `<div class="mt-2"><span class="badge bg-success">Budget: $${trip.budget}</span></div>` : ''}
         `;
+        event.appendChild(content);
+        
+        eventsContainer.appendChild(event);
     });
-    
-    html += '</div>';
-    container.innerHTML += html;
     
     // Add "View All" button if trips were limited
     if (data.trips.length > 10) {
@@ -800,32 +923,17 @@ function renderDestinationComparison(container, data) {
         });
     });
     
-    // Performance optimization: Limit to 3 destinations to save space
-    if (data.destinations.length > 3) {
-        data.destinations = data.destinations.slice(0, 3);
+    // Performance optimization: Limit to 5 destinations to save space
+    if (data.destinations.length > 5) {
+        data.destinations = data.destinations.slice(0, 5);
     }
     
-    // Create compact layout with two columns
-    const row = document.createElement('div');
-    row.className = 'row';
-    container.appendChild(row);
-    
-    // Left column for radar chart (6 cols)
-    const chartCol = document.createElement('div');
-    chartCol.className = 'col-lg-6 mb-2';
-    row.appendChild(chartCol);
-    
-    // Create radar chart canvas
+    // Create radar chart container
     const canvasContainer = document.createElement('div');
-    canvasContainer.className = 'radar-chart-container';
+    canvasContainer.className = 'radar-chart-container mb-4';
     const canvas = document.createElement('canvas');
     canvasContainer.appendChild(canvas);
-    chartCol.appendChild(canvasContainer);
-    
-    // Right column for table and insights (6 cols)
-    const infoCol = document.createElement('div');
-    infoCol.className = 'col-lg-6';
-    row.appendChild(infoCol);
+    container.appendChild(canvasContainer);
     
     // Normalize data for radar chart (0-100 scale)
     const normalizedData = data.destinations.map(destination => {
@@ -851,6 +959,8 @@ function renderDestinationComparison(container, data) {
                         'rgba(54, 162, 235, 0.5)',
                         'rgba(255, 99, 132, 0.5)',
                         'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)'
                     ];
                     
                     return {
@@ -898,49 +1008,9 @@ function renderDestinationComparison(container, data) {
             }
         });
         
-        // Create compact table with key metrics only
-        let tableHtml = `
-            <table class="table table-sm table-bordered comparison-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        ${data.destinations.map(d => `<th>${d.name.substring(0, 10)}${d.name.length > 10 ? '...' : ''}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        metrics.forEach(metric => {
-            tableHtml += `
-                <tr>
-                    <td>${metric.label}</td>
-                    ${data.destinations.map(d => {
-                        let value = d[metric.key];
-                        
-                        if (metric.type === 'money') {
-                            value = `$${(value || 0).toFixed(0)}`;
-                        } else if (metric.type === 'number') {
-                            value = `${value || 0}${metric.unit}`;
-                        } else if (metric.type === 'rating') {
-                            value = '★'.repeat(Math.round(value || 0));
-                        }
-                        
-                        return `<td>${value}</td>`;
-                    }).join('')}
-                </tr>
-            `;
-        });
-        
-        tableHtml += `
-                </tbody>
-            </table>
-        `;
-        
-        infoCol.innerHTML = tableHtml;
-        
-        // Add brief insights below the table
+        // Add brief insights directly below the chart (no table)
         const insightDiv = document.createElement('div');
-        insightDiv.className = 'insight-box alert alert-light py-1 px-2';
+        insightDiv.className = 'insight-box alert alert-light py-1 px-2 mt-3';
         
         // Find best destination for each metric
         const bestDestinations = {};
@@ -968,7 +1038,7 @@ function renderDestinationComparison(container, data) {
         ];
         
         insightDiv.innerHTML = insights.join(' • ');
-        infoCol.appendChild(insightDiv);
+        container.appendChild(insightDiv);
         
     } catch (error) {
         console.error("Error creating destination comparison chart:", error);
@@ -978,171 +1048,6 @@ function renderDestinationComparison(container, data) {
                 Error rendering destination comparison: ${error.message}
             </div>
         `;
-    }
-}
-
-/**
- * Initialize travel heatmap
- * @param {Array} destinations - Array of destination objects with coordinates
- */
-function initTravelHeatmap(destinations) {
-    const heatmapContainer = document.getElementById('travelHeatmap');
-    if (!heatmapContainer) return;
-    
-    // Validate that we have valid coordinates
-    const validDestinations = destinations.filter(d => d.lat && d.lng);
-    
-    if (validDestinations.length === 0) {
-        heatmapContainer.innerHTML = `
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                No location data available for heatmap
-            </div>
-        `;
-        return;
-    }
-    
-    // Create the map
-    const map = L.map(heatmapContainer).setView([20, 0], 2);
-    
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
-    }).addTo(map);
-    
-    // Prepare heat data
-    const heatData = validDestinations.map(d => {
-        // Intensity based on visit count or duration
-        const intensity = d.visit_count || d.duration || 1;
-        return [d.lat, d.lng, intensity];
-    });
-    
-    // Add heat layer
-    L.heatLayer(heatData, {
-        radius: 25,
-        blur: 15,
-        maxZoom: 10,
-        max: Math.max(...heatData.map(d => d[2])),
-        gradient: {
-            0.4: 'blue',
-            0.6: 'cyan',
-            0.7: 'lime',
-            0.8: 'yellow',
-            1.0: 'red'
-        }
-    }).addTo(map);
-}
-
-/**
- * Initialize trend analysis
- */
-function initTrendAnalysis() {
-    const trendContainer = document.getElementById('trendAnalysis');
-    if (!trendContainer) return;
-    
-    // Get data from the container's data attributes or fetch from API
-    const dataSource = trendContainer.getAttribute('data-source');
-    
-    if (dataSource) {
-        fetchDataForVisualization(dataSource)
-            .then(data => {
-                renderTrendAnalysis(trendContainer, data);
-            })
-            .catch(error => {
-                trendContainer.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Failed to load trend data
-                    </div>
-                `;
-            });
-    }
-}
-
-/**
- * Render trend analysis
- * @param {HTMLElement} container - The container element
- * @param {Object} data - The trend data
- */
-function renderTrendAnalysis(container, data) {
-    if (!data.timeSeries || Object.keys(data.timeSeries).length === 0) {
-        container.innerHTML = `
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                Not enough data for trend analysis
-            </div>
-        `;
-        return;
-    }
-    
-    // Create canvas for line chart
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-    
-    // Create the chart
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: Object.entries(data.timeSeries).map(([key, values], index) => {
-                const colors = [
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                ];
-                
-                return {
-                    label: key,
-                    data: values,
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
-                };
-            })
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'top'
-                }
-            }
-        }
-    });
-    
-    // Add insights if available
-    if (data.insights && data.insights.length > 0) {
-        let insightsHtml = `
-            <div class="mt-4">
-                <h5><i class="fas fa-chart-line me-2"></i>Trend Insights</h5>
-                <ul class="list-group">
-        `;
-        
-        data.insights.forEach(insight => {
-            insightsHtml += `
-                <li class="list-group-item">
-                    <i class="fas fa-lightbulb text-warning me-2"></i>
-                    ${insight}
-                </li>
-            `;
-        });
-        
-        insightsHtml += `
-                </ul>
-            </div>
-        `;
-        
-        container.innerHTML += insightsHtml;
     }
 }
 

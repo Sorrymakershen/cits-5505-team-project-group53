@@ -435,9 +435,9 @@
             </div>
         </div>
         
-        <!-- Map and Expense Breakdown -->
+        <!-- Map Section (previously Map and Expense Breakdown) -->
         <div class="row mb-5">
-            <div class="col-lg-8 mb-4">
+            <div class="col-12 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h4 class="card-title mb-4"><i class="fas fa-map me-2 text-primary"></i> Your Travel Map</h4>
@@ -452,97 +452,6 @@
                                 </div>
                             </div>
                         {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-chart-pie me-2 text-primary"></i> Expense Breakdown</h4>
-                        
-                        {% if stats.cost_breakdown %}
-                            <ul class="list-group list-group-flush">
-                                {% for category, amount in stats.cost_breakdown.items() %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>{{ category }}</span>
-                                        <span class="badge bg-primary rounded-pill">${{ "%.2f"|format(amount|float) }}</span>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i> Add costs to your travel plans to see expense breakdowns.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-          <!-- Travel Summary and Smart Suggestions -->
-        <div class="row">
-            <div class="col-lg-7 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-book-open me-2 text-primary"></i> Travel Summary</h4>
-                        
-                        {% if stats.total_trips > 0 %}
-                            <div class="mb-4">
-                                <h5>Exploration Summary</h5>
-                                <p>
-                                    You've embarked on <strong>{{ stats.total_trips }}</strong> adventures, 
-                                    exploring <strong>{{ stats.visited_cities|length }}</strong> unique destinations
-                                    across <strong>{{ stats.visited_countries|length }}</strong> countries.
-                                    {% if stats.total_days > 0 %}
-                                        Your journeys have taken you on the road for <strong>{{ stats.total_days }}</strong> days.
-                                    {% endif %}
-                                </p>
-                            </div>
-                            
-                            {% if stats.visited_cities %}
-                                <div class="mb-4">
-                                    <h5>Cities Explored</h5>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        {% for city in stats.visited_cities %}
-                                            <span class="badge bg-primary-subtle text-primary">{{ city }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                            
-                            {% if stats.top_interests %}
-                                <div class="mb-4">
-                                    <h5>Top Interests</h5>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        {% for interest in stats.top_interests %}
-                                            <span class="badge bg-success-subtle text-success">{{ interest }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i> Create travel plans to see your travel summary.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-5 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4">
-                            <i class="fas fa-lightbulb me-2 text-warning"></i> 
-                            Smart Recommendations
-                        </h4>
-                        
-                        <div id="recommendationsContainer">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Generating personalized recommendations...</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -729,34 +638,84 @@
             </div>
         </div>
         
-        <!-- Travel Trend Analysis and Heat Map -->
+        <!-- Travel Summary and Smart Recommendations (moved to bottom) -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-4">Travel Insights & Recommendations</h2>
+            </div>
+        </div>
+        
         <div class="row mb-5">
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+            <div class="col-lg-7 mb-4">
+                <div class="card h-100 border-primary border-opacity-25">
                     <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-chart-line me-2 text-primary"></i> Travel Trends</h4>
-                        <div id="trendAnalysis" data-source="{{ url_for('statistics.get_trend_analysis') }}">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary bg-opacity-10 p-3 rounded me-3">
+                                <i class="fas fa-book-open text-primary fa-2x"></i>
+                            </div>
+                            <h4 class="card-title mb-0">Travel Summary</h4>
+                        </div>
+                        
+                        {% if stats.total_trips > 0 %}
+                            <div class="mb-4">
+                                <h5>Exploration Summary</h5>
+                                <p>
+                                    You've embarked on <strong>{{ stats.total_trips }}</strong> adventures, 
+                                    exploring <strong>{{ stats.visited_cities|length }}</strong> unique destinations
+                                    across <strong>{{ stats.visited_countries|length }}</strong> countries.
+                                    {% if stats.total_days > 0 %}
+                                        Your journeys have taken you on the road for <strong>{{ stats.total_days }}</strong> days.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            
+                            {% if stats.visited_cities %}
+                                <div class="mb-4">
+                                    <h5>Cities Explored</h5>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for city in stats.visited_cities %}
+                                            <span class="badge bg-primary-subtle text-primary">{{ city }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if stats.top_interests %}
+                                <div class="mb-4">
+                                    <h5>Top Interests</h5>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for interest in stats.top_interests %}
+                                            <span class="badge bg-success-subtle text-success">{{ interest }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i> Create travel plans to see your travel summary.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5 mb-4">
+                <div class="card h-100 border-warning border-opacity-25">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-warning bg-opacity-10 p-3 rounded me-3">
+                                <i class="fas fa-lightbulb text-warning fa-2x"></i>
+                            </div>
+                            <h4 class="card-title mb-0">Smart Recommendations</h4>
+                        </div>
+                        
+                        <div id="recommendationsContainer">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
-                                <p class="mt-2">Analyzing your travel trends...</p>
+                                <p class="mt-2">Generating personalized recommendations...</p>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h4 class="card-title mb-4"><i class="fas fa-globe me-2 text-primary"></i> Travel Heatmap</h4>
-                        {% if home_address %}
-                            <div id="travelHeatmap" class="map-container"></div>
-                        {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i> Set your home location to view travel intensity heatmap.
-                            </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -766,6 +725,10 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
 <script>
     // Global variables to track initialization state
     let isInitialized = false;
@@ -1102,7 +1065,7 @@
         // Fetch address suggestions
         function fetchAddressSuggestions(query) {
             // Show loading state
-            suggestionsContainer.innerHTML = '<div class="address-suggestion text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div> 搜索中...</div>';
+            suggestionsContainer.innerHTML = '<div class="address-suggestion text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Searching...</div>';
             suggestionsContainer.classList.remove('d-none');
             
             // Call Nominatim API
@@ -1112,12 +1075,12 @@
                     if (data && data.length > 0) {
                         renderSuggestions(data);
                     } else {
-                        suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">未找到结果</div>';
+                        suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found</div>';
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching address suggestions:', error);
-                    suggestionsContainer.innerHTML = '<div class="address-suggestion text-center text-danger">搜索地址时出错</div>';
+                    suggestionsContainer.innerHTML = '<div class="address-suggestion text-center text-danger">Error searching for address</div>';
                 });
         }
         
@@ -1176,7 +1139,7 @@
             
             // Add a new marker
             previewMarker = L.marker([lat, lng]).addTo(previewMap);
-            previewMarker.bindPopup(`<strong>已选位置</strong><br>${address}`).openPopup();
+            previewMarker.bindPopup(`<strong>Selected Location</strong><br>${address}`).openPopup();
             
             // Update the coordinates display
             document.getElementById('selectedLat').textContent = lat.toFixed(6);
@@ -1184,4 +1147,7 @@
         }
     }
 </script>
+
+<!-- Include data-analysis.js with defer to ensure DOM is loaded first -->
+<script src="{{ url_for('static', filename='js/data-analysis.js') }}" defer></script>
 {% endblock %}

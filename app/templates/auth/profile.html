@@ -22,7 +22,8 @@
         <div class="col-lg-8">
             <div class="card animate fade-in" style="animation-delay: 0.2s;">
                 <div class="card-body p-4">
-                    <h3 class="card-title mb-4">Edit Profile</h3>                    <form method="post" class="needs-validation" novalidate>
+                    <h3 class="card-title mb-4">Edit Profile</h3>                    
+                    <form method="post" class="needs-validation" novalidate onsubmit="return validatePasswords()">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
@@ -36,7 +37,7 @@
                         <div class="mb-3">
                             <label for="password" class="form-label">New Password</label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="password" name="password">
+                                <input type="password" class="form-control" id="password" name="password" required>
                                 <button class="btn btn-outline-secondary" type="button" id="togglePassword" onclick="togglePasswordVisibility('togglePassword', 'password')">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -46,11 +47,12 @@
                         <div class="mb-3">
                             <label for="confirm_password" class="form-label">Confirm New Password</label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
                                 <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword" onclick="togglePasswordVisibility('toggleConfirmPassword', 'confirm_password')">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
+                            <div id="passwordError" class="text-danger" style="display:none;">Passwords do not match</div>
                         </div>
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -61,4 +63,46 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Function to toggle password visibility
+    function togglePasswordVisibility(toggleButtonId, passwordFieldId) {
+        var passwordField = document.getElementById(passwordFieldId);
+        var toggleButton = document.getElementById(toggleButtonId);
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            toggleButton.querySelector('i').classList.remove('fa-eye');
+            toggleButton.querySelector('i').classList.add('fa-eye-slash');
+        } else {
+            passwordField.type = "password";
+            toggleButton.querySelector('i').classList.remove('fa-eye-slash');
+            toggleButton.querySelector('i').classList.add('fa-eye');
+        }
+    }
+
+    // Function to validate if passwords match
+    function validatePasswords() {
+        var password = document.getElementById("password").value;
+        var confirmPassword = document.getElementById("confirm_password").value;
+        var errorMessage = document.getElementById("passwordError");
+
+        // Check if the passwords match
+        if (password !== confirmPassword) {
+            errorMessage.style.display = "block"; // Show error message
+            return false; // Prevent form submission
+        } else {
+            errorMessage.style.display = "none"; // Hide error message
+            return true; // Allow form submission
+        }
+    }
+
+    // Prevent form submission if passwords don't match
+    document.querySelector('form').addEventListener('submit', function(event) {
+        if (!validatePasswords()) {
+            event.preventDefault(); // Stop form submission
+            console.log("Passwords do not match, submission prevented.");
+        }
+    });
+</script>
+
 {% endblock %}

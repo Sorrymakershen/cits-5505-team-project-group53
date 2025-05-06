@@ -34,7 +34,7 @@ function initExpenseChart() {
     if (!chartContainer) return;
     
     // Get data from the container's data attributes or fetch from API
-    const dataSource = chartContainer.getAttribute('data-source') || '/api/expenses/by-trip';
+    const dataSource = chartContainer.getAttribute('data-source') || '/statistics/api/expenses/by-trip';
     
     // Always fetch from API to get expenses by trip
     fetchDataForVisualization(dataSource)
@@ -658,7 +658,7 @@ function initTravelTimeline() {
  * @param {Object} data - The timeline data
  */
 function renderTravelTimeline(container, data) {
-    console.log("Rendering travel timeline");
+    console.log("Rendering travel timeline", data);
     
     if (!data.trips || !Array.isArray(data.trips) || data.trips.length === 0) {
         container.innerHTML = `
@@ -670,116 +670,20 @@ function renderTravelTimeline(container, data) {
         return;
     }
     
-    // Performance optimization: Limit number of trips if there are too many
-    let trips = [...data.trips]; // Create a copy
+    // Clear container
+    container.innerHTML = '';
     
-    // Sort trips by start date (newest first)
-    trips.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    // Create actual timeline container with the timeline class
+    const timelineElement = document.createElement('div');
+    timelineElement.className = 'timeline';
+    container.appendChild(timelineElement);
     
-    // Limit to 10 most recent trips to prevent browser freezing
-    if (trips.length > 10) {
-        const moreTripsCount = trips.length - 10;
-        trips = trips.slice(0, 10);
-        
-        // Add note about more trips
-        container.innerHTML = `
-            <div class="alert alert-info mb-4">
-                <i class="fas fa-info-circle me-2"></i>
-                Showing your 10 most recent trips. ${moreTripsCount} more ${moreTripsCount === 1 ? 'trip is' : 'trips are'} not displayed for performance reasons.
-            </div>
-        `;
-    } else {
-        container.innerHTML = ''; // Clear container
-    }
+    // Sort trips by start date
+    const trips = [...data.trips]; // Create a copy
+    trips.sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // 按时间顺序
     
-    // Create horizontal timeline container
-    const timelineContainer = document.createElement('div');
-    timelineContainer.className = 'horizontal-timeline';
-    container.appendChild(timelineContainer);
-    
-    // Add CSS styles for horizontal timeline
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-        .horizontal-timeline {
-            position: relative;
-            padding: 20px 0;
-            width: 100%;
-            margin: 0 auto;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .timeline-track {
-            position: relative;
-            height: 4px;
-            background-color: #e9ecef;
-            margin: 0 40px;
-            min-width: max-content;
-        }
-        .timeline-events {
-            position: relative;
-            padding-top: 40px;
-            margin-left: 40px;
-        }
-        .timeline-event {
-            position: absolute;
-            transform: translateX(-50%);
-            display: inline-block;
-        }
-        .timeline-point {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background-color: #007bff;
-            position: absolute;
-            top: -6px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 2;
-        }
-        .timeline-content {
-            position: relative;
-            width: 200px;
-            background-color: #fff;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 10px;
-            text-align: center;
-            margin-top: 15px;
-            white-space: normal;
-        }
-        .timeline-content h5 {
-            margin-top: 0;
-            font-size: 1rem;
-        }
-        .timeline-content p {
-            margin: 5px 0;
-            font-size: 0.8rem;
-        }
-    `;
-    document.head.appendChild(styleEl);
-    
-    // Create timeline track
-    const track = document.createElement('div');
-    track.className = 'timeline-track';
-    timelineContainer.appendChild(track);
-    
-    // Create timeline events container
-    const eventsContainer = document.createElement('div');
-    eventsContainer.className = 'timeline-events';
-    timelineContainer.appendChild(eventsContainer);
-    
-    // Calculate total timeline width based on trip count
-    const timelineWidth = Math.max(trips.length * 250, 800); // At least 800px or 250px per trip
-    track.style.width = `${timelineWidth}px`;
-    
-    // Calculate earliest and latest dates
-    const dates = trips.map(trip => new Date(trip.start_date));
-    const earliestDate = new Date(Math.min(...dates));
-    const latestDate = new Date(Math.max(...dates.map((_, i) => new Date(trips[i].end_date))));
-    
-    // Add each trip to the timeline
+    // Add timeline items
     trips.forEach((trip, index) => {
-        // Validate date fields
         let startDate, endDate, duration;
         
         try {
@@ -792,65 +696,45 @@ function renderTravelTimeline(container, data) {
             }
         } catch (e) {
             console.error("Date parsing error for trip:", trip, e);
-            startDate = new Date();
-            endDate = new Date();
-            duration = 0;
+            return; // Skip this trip if dates are invalid
         }
         
-        // Calculate position on timeline (percentage)
-        const totalDays = (latestDate - earliestDate) / (1000 * 60 * 60 * 24);
-        const daysSinceStart = (startDate - earliestDate) / (1000 * 60 * 60 * 24);
-        const position = totalDays > 0 ? (daysSinceStart / totalDays) * 100 : (index / Math.max(trips.length - 1, 1)) * 100;
+        // Create timeline item (alternating left and right)
+        const timelineItem = document.createElement('div');
+        timelineItem.className = `timeline-item ${index % 2 === 0 ? 'left' : 'right'}`;
         
-        // Create timeline event
-        const event = document.createElement('div');
-        event.className = 'timeline-event';
-        event.style.left = `${position}%`;
+        // Create timeline badge with plane icon
+        const timelineBadge = document.createElement('div');
+        timelineBadge.className = 'timeline-badge bg-primary';
+        timelineBadge.innerHTML = '<i class="fas fa-plane text-white"></i>';
         
-        // Create timeline point
-        const point = document.createElement('div');
-        point.className = 'timeline-point';
-        event.appendChild(point);
+        // Create timeline panel (content)
+        const timelinePanel = document.createElement('div');
+        timelinePanel.className = 'timeline-panel';
         
-        // Create content card
-        const content = document.createElement('div');
-        content.className = 'timeline-content';
-        content.innerHTML = `
-            <h5>${trip.title || 'Untitled Trip'}</h5>
-            <p class="text-muted">
-                <i class="fas fa-calendar me-1"></i>
-                ${formatDate(startDate)} - ${formatDate(endDate)}
-                <span class="badge bg-light text-dark ms-2">${duration} days</span>
-            </p>
-            <p><strong>${trip.destination || 'Unknown Destination'}</strong></p>
-            ${trip.budget ? `<div class="mt-2"><span class="badge bg-success">Budget: $${trip.budget}</span></div>` : ''}
+        const formattedStartDate = formatDate(startDate);
+        const formattedEndDate = formatDate(endDate);
+        
+        timelinePanel.innerHTML = `
+            <div class="timeline-heading">
+                <h5 class="timeline-title">${trip.title || 'Untitled Trip'}</h5>
+                <p class="text-muted">
+                    <i class="fas fa-calendar me-1"></i> 
+                    ${formattedStartDate} - ${formattedEndDate}
+                </p>
+            </div>
+            <div class="timeline-body">
+                <p><strong>Destination:</strong> ${trip.destination || 'Unknown'}</p>
+                <p><strong>Duration:</strong> ${duration} days</p>
+                ${trip.budget ? `<p><strong>Budget:</strong> $${trip.budget}</p>` : ''}
+            </div>
         `;
-        event.appendChild(content);
         
-        eventsContainer.appendChild(event);
+        // Append all elements in the correct order
+        timelineItem.appendChild(timelineBadge);
+        timelineItem.appendChild(timelinePanel);
+        timelineElement.appendChild(timelineItem);
     });
-    
-    // Add "View All" button if trips were limited
-    if (data.trips.length > 10) {
-        const viewAllButton = document.createElement('div');
-        viewAllButton.className = 'text-center mt-4';
-        viewAllButton.innerHTML = `
-            <button id="viewAllTripsBtn" class="btn btn-outline-primary">
-                <i class="fas fa-list me-2"></i>View All ${data.trips.length} Trips
-            </button>
-        `;
-        container.appendChild(viewAllButton);
-        
-        // Add click event for the button
-        setTimeout(() => {
-            const button = document.getElementById('viewAllTripsBtn');
-            if (button) {
-                button.addEventListener('click', function() {
-                    window.location.href = '/planner'; // Redirect to planner page to see all trips
-                });
-            }
-        }, 0);
-    }
 }
 
 /**

@@ -582,7 +582,7 @@
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title mb-4"><i class="fas fa-stream me-2 text-primary"></i> Your Travel Timeline</h4>
-                        <div id="travelTimeline" data-source="{{ url_for('statistics.get_travel_timeline') }}">
+                        <div id="travelTimeline" data-source="{{ url_for('statistics.get_travel_timeline') }}" style="height: 500px; overflow-y: auto;">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>

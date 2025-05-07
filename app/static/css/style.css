@@ -1025,3 +1025,139 @@ body {
         border-color: transparent #ffffff transparent transparent;
     }
 }
+
+/* Typing effect styling */
+.typing-container {
+  position: relative;
+  min-height: 60px;
+}
+
+#typing-text {
+  display: inline-block;
+  position: relative;
+  margin: 0;
+  padding-right: 5px; /* Space for cursor */
+  white-space: pre-wrap; /* Allow text to wrap */
+}
+
+.cursor-blink::after {
+  content: '|';
+  position: absolute;
+  right: -5px;
+  animation: blink 0.7s infinite;
+  font-weight: 300;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+
+.typing-slogan-container {
+  height: 60px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.hero-slogan {
+  font-size: 1.4rem;
+  line-height: 1.5;
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.typing-active {
+  animation: typing 3.5s steps(40, end);
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+
+.cursor-blink {
+  position: relative;
+}
+
+.cursor-blink::after {
+  content: "|";
+  position: absolute;
+  right: -10px;
+  animation: blink-caret 0.75s step-end infinite;
+}
+
+@keyframes blink-caret {
+  from, to { opacity: 1 }
+  50% { opacity: 0 }
+}
+
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.zoom-in {
+  animation-name: zoomIn;
+}
+
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation-name: slideInRight;
+}
+
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}

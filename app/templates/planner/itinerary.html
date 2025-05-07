@@ -198,6 +198,118 @@
         });
     });
     
+    // Initialize the map with markers
+    function initializePlanMap() {
+        const mapElement = document.getElementById('planMap');
+        if (!mapElement) {
+            console.error('Map container element not found!');
+            return;
+        }
+        
+        // Get item data from the map's data attribute
+        let itemsJson;
+        try {
+            const itemsData = mapElement.dataset.items;
+            console.log('Raw map items data:', itemsData);
+            itemsJson = JSON.parse(itemsData);
+        } catch (e) {
+            console.error('Error parsing map items data:', e);
+            itemsJson = [];
+        }
+        
+        // Initialize Leaflet map
+        const map = L.map('planMap');
+        
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Store map instance for later use
+        window.planMap = map;
+        window.planMapMarkers = [];
+        
+        // Add markers to the map
+        addMarkersToMap(itemsJson);
+    }
+    
+    // Add markers to the map
+    function addMarkersToMap(items) {
+        // Get the map instance
+        const map = window.planMap;
+        if (!map) {
+            console.error('Map not initialized');
+            return;
+        }
+        
+        // Filter items with valid coordinates
+        const validItems = items.filter(item => {
+            return item && 
+                   typeof item === 'object' &&
+                   item.lat && item.lng &&
+                   !isNaN(parseFloat(item.lat)) && 
+                   !isNaN(parseFloat(item.lng));
+        });
+        
+        console.log('Valid items for map markers:', validItems);
+        
+        // If no valid items, center map on default location
+        if (validItems.length === 0) {
+            map.setView([0, 0], 2);
+            return;
+        }
+        
+        // Create bounds object to zoom map to fit all markers
+        const bounds = L.latLngBounds();
+        
+        // Add markers for each valid item
+        validItems.forEach(item => {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lng);
+            
+            // Create marker
+            const marker = L.marker([lat, lng]).addTo(map);
+            window.planMapMarkers.push(marker);
+            
+            // Extend bounds to include this marker
+            bounds.extend([lat, lng]);
+            
+            // Add popup with activity info
+            let popupContent = `<strong>${item.activity || 'Activity'}</strong>`;
+            if (item.location) {
+                popupContent += `<br><i>Location: ${item.location}</i>`;
+            }
+            if (item.day) {
+                popupContent += `<br>Day ${item.day}`;
+            }
+            if (item.time) {
+                popupContent += `<br>Time: ${item.time}`;
+            }
+            if (item.cost) {
+                popupContent += `<br>Cost: $${item.cost}`;
+            }
+            
+            marker.bindPopup(popupContent);
+            
+            // Add permanent tooltip for day info
+            if (item.day) {
+                marker.bindTooltip(`Day ${item.day}`, {
+                    permanent: true,
+                    direction: 'top',
+                    className: 'map-day-tooltip'
+                });
+            }
+        });
+        
+        // Adjust map view to show all markers
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, {
+                padding: [30, 30],
+                maxZoom: 13
+            });
+        }
+    }
+    
     // add markers to the map
     function setupAddActivityForm() {
         const form = document.getElementById('addActivityForm');
@@ -273,7 +385,7 @@
         });
     }
     
-    // update map with new markers
+    // update map with new data
     function refreshItineraryData() {
         fetch(GET_ITINERARY_DATA_URL)
             .then(response => response.json())

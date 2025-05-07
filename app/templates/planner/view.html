@@ -634,6 +634,7 @@
                                 const percentage = (data.total_cost / PLAN_BUDGET) * 100;
                                 progressBar.style.width = percentage + '%';
                                 progressBar.setAttribute('aria-valuenow', percentage);
+                                progressBar.setAttribute('data-width', percentage); 
                             }
                         }
                     }
@@ -976,6 +977,7 @@
                         const percentage = (data.total_cost / data.budget) * 100;
                         progressBar.style.width = percentage + '%';
                         progressBar.setAttribute('aria-valuenow', percentage);
+                        progressBar.setAttribute('data-width', percentage); 
                     }
                 }
                 

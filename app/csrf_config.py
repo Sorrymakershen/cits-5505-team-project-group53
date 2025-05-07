@@ -28,7 +28,16 @@ def configure_csrf(app):
     # Only add routes here if they:
     # 1. Have their own authentication mechanism (like API tokens)
     # 2. Need to receive requests from external systems that cannot include CSRF tokens
-    app.config['WTF_CSRF_EXEMPT_LIST'] = ['/statistics/set-home-location', '/statistics/validate-address']
+    app.config['WTF_CSRF_EXEMPT_LIST'] = [
+        '/statistics/set-home-location', 
+        '/statistics/validate-address',
+        '/planner/<int:plan_id>/delete_itinerary_item',
+        '/planner/<int:plan_id>/itinerary/data',
+        '/planner/<int:plan_id>/update_item_day_time',
+        '/planner/<int:plan_id>/update_item_time',
+        '/planner/<int:plan_id>/delete',
+        '/planner/<int:plan_id>/toggle_public'  # <-- add this line for AJAX toggle public
+    ]
 
     # Enable CSRF protection
     from flask_wtf.csrf import CSRFProtect

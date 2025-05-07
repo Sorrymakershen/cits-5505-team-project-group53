@@ -23,6 +23,7 @@
                 <div class="card-body p-4">
                     <h3 class="card-title mb-4">Invite Someone</h3>
                     <form method="post" action="{{ url_for('planner.share_plan', plan_id=plan.id) }}" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="email" name="email" required>

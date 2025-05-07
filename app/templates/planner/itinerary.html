@@ -405,13 +405,40 @@
         const container = document.getElementById('itineraryContainer');
         let allItems = [];
         
-        // merge itinerary items into a single array
-        Object.keys(itineraryByDay).forEach(day => {
-            itineraryByDay[day].forEach(item => {
-                item.day = parseInt(day);
-                allItems.push(item);
+        // Check if itineraryByDay is an array (from server response) or an object (old format)
+        if (Array.isArray(itineraryByDay)) {
+            // Server returns format: [[day1, [items]], [day2, [items]]]
+            itineraryByDay.forEach(dayData => {
+                const day = dayData[0];
+                const items = dayData[1];
+                
+                if (Array.isArray(items)) {
+                    items.forEach(item => {
+                        if (item && typeof item === 'object') {
+                            // Ensure day is set properly from the array structure
+                            item.day = item.day || day;
+                            allItems.push(item);
+                        }
+                    });
+                }
             });
-        });
+        } else {
+            // Handle old format if needed: {day1: [items], day2: [items]}
+            Object.keys(itineraryByDay).forEach(day => {
+                const items = itineraryByDay[day];
+                if (Array.isArray(items)) {
+                    items.forEach(item => {
+                        if (item && typeof item === 'object') {
+                            item.day = parseInt(day);
+                            allItems.push(item);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Log the processed items for debugging
+        console.log("Processed items for table update:", allItems);
         
         // order items by day and time
         allItems.sort((a, b) => {
@@ -450,19 +477,27 @@
         `;
         
         allItems.forEach((item, index) => {
+            // Add safety checks for all fields to handle undefined values
+            const day = item.day !== undefined ? item.day : '-';
+            const time = item.time || '-';
+            const activity = item.activity || '-';
+            const location = item.location || '-';
+            const cost = item.cost ? `$${item.cost}` : '-';
+            const itemId = item.id;
+            
             html += `
                 <tr class="animate fade-in" data-delay="${index * 0.05}">
-                    <td>${item.day}</td>
-                    <td>${item.time || '-'}</td>
-                    <td>${item.activity}</td>
-                    <td>${item.location || '-'}</td>
-                    <td>${item.cost ? '$' + item.cost : '-'}</td>
+                    <td>${day}</td>
+                    <td>${time}</td>
+                    <td>${activity}</td>
+                    <td>${location}</td>
+                    <td>${cost}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <a href="${EDIT_PLAN_URL}?item_id=${item.id}" class="btn btn-outline-primary">
+                            <a href="${EDIT_PLAN_URL}?item_id=${itemId}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button type="button" class="btn btn-outline-danger delete-item-btn" data-item-id="${item.id}">
+                            <button type="button" class="btn btn-outline-danger delete-item-btn" data-item-id="${itemId}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>

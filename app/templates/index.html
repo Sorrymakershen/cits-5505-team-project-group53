@@ -2,13 +2,18 @@
 
 
 {% block content %}
-<!-- Hero Section with Enhanced Animations -->
+<!-- Hero Section with Real Typing Effect -->
 <section class="hero">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 animate fade-in">
-                <h1 class="animate slide-in" style="animation-delay: 0.2s;">Your Journey, Your Story</h1>
-                <p class="lead mb-4 animate slide-in" style="animation-delay: 0.4s;">Plan your next adventure and preserve your travel memories all in one place.</p>
+                <h1 class="animate slide-in mb-3" style="animation-delay: 0.2s;">Your Journey, Your Story</h1>
+                
+                <!-- Fixed height typing container to prevent layout shifts -->
+                <div class="typing-container" style="height: 80px; margin-bottom: 1.5rem;">
+                    <p id="typing-text" class="lead text-white fw-light"></p>
+                </div>
+                
                 <div class="d-flex gap-3 animate slide-in align-items-center flex-wrap" style="animation-delay: 0.6s;">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('planner.create_plan') }}" class="btn btn-light btn-md">Plan a Trip</a>
@@ -21,7 +26,7 @@
                 </div>
             </div>
             <div class="col-lg-6 mt-5 mt-lg-0 animate zoom-in" style="animation-delay: 0.5s;">
-                <!-- Hero image or decorative element could be added here -->
+                <!-- Hero image is already present in the background -->
             </div>
         </div>
     </div>
@@ -131,4 +136,96 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // List of slogans to type
+    const slogans = [
+        "Plan your next adventure and preserve your travel memories all in one place.",
+        "Discover hidden gems and create unforgettable travel stories.",
+        "Turn your wanderlust into perfectly planned journeys.",
+        "Capture moments, share experiences, remember forever.",
+        "Your passport to seamless travel planning and memory keeping.",
+        "Travel smarter, experience more, forget nothing.",
+        "Every journey becomes a story worth preserving.",
+        "From dream destinations to detailed itineraries in minutes."
+    ];
+
+    // Typing effect variables
+    let currentSloganIndex = 0;
+    let currentCharIndex = 0;
+    let isDeleting = false;
+    let typingSpeed = 50; // milliseconds per character
+    let delayAfterTyping = 2000; // pause when slogan is fully typed
+    let delayAfterDeleting = 500; // pause before typing next slogan
+
+    // Element to display typing text
+    const typingElement = document.getElementById("typing-text");
+
+    function typeEffect() {
+        const currentSlogan = slogans[currentSloganIndex];
+        
+        if (!isDeleting) {
+            // Typing forward
+            typingElement.textContent = currentSlogan.substring(0, currentCharIndex + 1);
+            currentCharIndex++;
+            
+            // When finished typing
+            if (currentCharIndex >= currentSlogan.length) {
+                isDeleting = true;
+                setTimeout(typeEffect, delayAfterTyping);
+                return;
+            }
+            
+            // Slight speed variation for natural effect
+            typingSpeed = Math.random() * 30 + 40;
+        } else {
+            // Deleting
+            typingElement.textContent = currentSlogan.substring(0, currentCharIndex);
+            currentCharIndex--;
+            
+            // When finished deleting
+            if (currentCharIndex < 0) {
+                isDeleting = false;
+                currentSloganIndex = (currentSloganIndex + 1) % slogans.length;
+                setTimeout(typeEffect, delayAfterDeleting);
+                return;
+            }
+            
+            // Delete faster than typing
+            typingSpeed = Math.random() * 20 + 20;
+        }
+        
+        setTimeout(typeEffect, typingSpeed);
+    }
+
+    // Add cursor effect
+    typingElement.classList.add('cursor-blink');
+    
+    // Start the typing effect
+    setTimeout(typeEffect, 500);
+
+    // Add animations on scroll
+    function animateOnScroll() {
+        $('.animate').each(function() {
+            const elementTop = $(this).offset().top;
+            const elementHeight = $(this).height();
+            const windowHeight = $(window).height();
+            const scrollY = window.scrollY || window.pageYOffset;
+            
+            // Add visible class when element enters viewport
+            if (scrollY > elementTop - windowHeight + elementHeight/2) {
+                $(this).addClass('visible');
+            }
+        });
+    }
+    
+    // Trigger animations on scroll
+    $(window).on('scroll', animateOnScroll);
+    // Initial trigger
+    animateOnScroll();
+});
+</script>
 {% endblock %}

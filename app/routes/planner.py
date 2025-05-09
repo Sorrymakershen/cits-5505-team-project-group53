@@ -411,14 +411,24 @@ def share_plan(plan_id):
             if existing_share.status == 'pending':
                 flash(f'A share invitation is already pending for {email}.', 'info')
             elif existing_share.status == 'accepted':
-                flash(f'This plan is already shared with {email}.', 'info')
-            else: # e.g. rejected, or other statuses
-                # Optionally, allow re-sharing if previously rejected by deleting old share or updating it
-                # For now, let's prevent re-sharing to keep it simple
-                flash(f'This plan was previously shared with {email} and cannot be shared again at this moment.', 'warning')
+                flash(f'This plan is already shared with {email}. You can manage permissions if needed or revoke and re-share.', 'info')
+            elif existing_share.status == 'rejected':
+                # If previously rejected, update the existing share to pending and set new permissions
+                existing_share.status = 'pending'
+                existing_share.can_edit = can_edit
+                existing_share.created_at = datetime.utcnow() # Optionally update timestamp
+                db.session.commit()
+                flash(f'Re-sent sharing invitation to {email}. They will need to accept it.', 'success')
+            else: # Other statuses, treat as re-share opportunity or specific handling
+                # For now, let's assume we can re-activate by setting to pending
+                existing_share.status = 'pending'
+                existing_share.can_edit = can_edit
+                existing_share.created_at = datetime.utcnow()
+                db.session.commit()
+                flash(f'Sharing invitation for {email} has been re-activated.', 'success')
             return redirect(url_for('planner.share_plan', plan_id=plan_id))
 
-        # Create new share
+        # Create new share if no existing_share record or if we decided to create new for rejected ones
         new_share = PlanShare(
             travel_plan_id=plan.id,
             shared_user_id=target_user.id,

@@ -77,11 +77,11 @@ def create_plan():
         interests = request.form.get('interests')
         is_public = 'is_public' in request.form
         
-        # 获取位置坐标
+        # Get location coordinates
         lat = request.form.get('lat')
         lng = request.form.get('lng')
         
-        # 转换坐标为浮点数（如果有提供）
+        # 转Change the coordinates to floating-point numbers (if provided)
         dest_lat = float(lat) if lat and lat.strip() else None
         dest_lng = float(lng) if lng and lng.strip() else None
         
@@ -203,11 +203,11 @@ def edit_plan(plan_id):
         plan.interests = request.form.get('interests')
         plan.is_public = 'is_public' in request.form
         
-        # 获取位置坐标
+        # Get location coordinates
         lat = request.form.get('lat')
         lng = request.form.get('lng')
         
-        # 转换坐标为浮点数（如果有提供）
+        # 转Change the coordinates to floating-point numbers (if provided)
         if lat and lat.strip():
             plan.dest_lat = float(lat)
         if lng and lng.strip():
@@ -886,7 +886,7 @@ def update_item_time(plan_id):
     item_id = data.get('item_id')
     time = data.get('time')
     
-    # 添加调试日志
+    # Add debug logs
     print(f"DEBUG - Updating time: item_id={item_id}, time={time}, type(time)={type(time)}")
     
     if not item_id:
@@ -898,7 +898,7 @@ def update_item_time(plan_id):
     if item.travel_plan_id != plan_id:
         return jsonify({'success': False, 'message': 'Item does not belong to this plan'}), 403
     
-    # 添加调试日志 - 显示当前时间值
+    # Add debug log - display the current time value
     print(f"DEBUG - Before update: item.time={item.time}, type={type(item.time)}")
     
     # Update the time

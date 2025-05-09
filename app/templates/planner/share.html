@@ -91,15 +91,15 @@
                                             {% endif %}
                                         </small>
                                     </div>
-                                    {# Only plan owner should see the revoke button for accepted/pending shares #}
-                                    {% if plan.user_id == current_user.id and (share.status == 'accepted' or share.status == 'pending') %}
+                                    {# Revoke button and form removed as per request #}
+                                    {# {% if plan.user_id == current_user.id and (share.status == 'accepted' or share.status == 'pending') %}
                                     <form method="post" action="{{ url_for('planner.remove_share', plan_id=plan.id, share_id=share.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to revoke access for this user?');">
                                             <i class="fas fa-times"></i> Revoke
                                         </button>
                                     </form>
-                                    {% endif %}
+                                    {% endif %} #}
                                 </div>
                             {% endfor %}
                         </div>

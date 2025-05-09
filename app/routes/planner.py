@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models.travel_plan import TravelPlan, ItineraryItem, PlanShare
+from app.models.user import User
 from datetime import datetime, timedelta
 import random  # For generating random recommendations
 import requests  # add requests module for API calls
@@ -51,14 +52,19 @@ def set_cached_response(endpoint, params, response):
 @login_required
 def index():
     """Travel planner main page listing user's travel plans"""
-    # Get plans created by the user
     owned_plans = TravelPlan.query.filter_by(user_id=current_user.id).order_by(TravelPlan.start_date).all()
     
-    # Get plans shared with the user
-    shared_with_me = PlanShare.query.filter_by(shared_email=current_user.email).all()
-    shared_plans = [share.travel_plan for share in shared_with_me]
+    # Get plans shared with the user and accepted
+    accepted_shares = PlanShare.query.filter_by(shared_user_id=current_user.id, status='accepted').all()
+    shared_plans = [share.travel_plan for share in accepted_shares]
     
-    return render_template('planner/index.html', plans=owned_plans, shared_plans=shared_plans)
+    # Get pending invitations for the current user
+    pending_invitations = PlanShare.query.filter_by(shared_user_id=current_user.id, status='pending').all()
+    
+    return render_template('planner/index.html', 
+                           plans=owned_plans, 
+                           shared_plans=shared_plans,
+                           pending_invitations=pending_invitations)
 
 @planner_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -112,17 +118,29 @@ def create_plan():
 def view_plan(plan_id):
     """View a specific travel plan"""
     plan = TravelPlan.query.get_or_404(plan_id)
-    
-    # Check if user owns this plan or it's shared with them
-    if plan.user_id != current_user.id:
-        shared = PlanShare.query.filter_by(
+    can_view = False
+    can_edit_shared = False # To pass to template for UI, if needed
+
+    if plan.user_id == current_user.id:
+        can_view = True
+        # Owner can always edit, but for consistency with shared logic:
+        # plan_share_details = PlanShare(can_edit=True) # Not a real DB object, just for logic
+    else:
+        share_info = PlanShare.query.filter_by(
             travel_plan_id=plan_id,
-            shared_email=current_user.email
+            shared_user_id=current_user.id,
+            status='accepted'
         ).first()
         
-        if not shared and not plan.is_public:
-            flash('You do not have access to this travel plan', 'danger')
-            return redirect(url_for('planner.index'))
+        if share_info:
+            can_view = True
+            can_edit_shared = share_info.can_edit
+        elif plan.is_public: # Allow viewing if public, even if not explicitly shared or owned
+            can_view = True
+
+    if not can_view:
+        flash('You do not have access to this travel plan.', 'danger')
+        return redirect(url_for('planner.index'))
     
     # Calculate total cost from all itinerary items
     total_cost = 0
@@ -172,7 +190,10 @@ def view_plan(plan_id):
         total_cost=total_cost, 
         itinerary_items_json=itinerary_items_json,
         itinerary_by_day=itinerary_by_day,
-        categories=categories
+        categories=categories,
+        # Pass edit permission for shared users if needed in template
+        # current_user_can_edit = (plan.user_id == current_user.id) or (share_info and share_info.can_edit if 'share_info' in locals() else False)
+        user_can_edit_this_plan=(plan.user_id == current_user.id or can_edit_shared)
     )
 
 @planner_bp.route('/<int:plan_id>/edit', methods=['GET', 'POST'])
@@ -180,18 +201,23 @@ def view_plan(plan_id):
 def edit_plan(plan_id):
     """Edit an existing travel plan"""
     plan = TravelPlan.query.get_or_404(plan_id)
-    
-    # Check if user owns this plan or has edit permission
-    if plan.user_id != current_user.id:
-        shared = PlanShare.query.filter_by(
+    user_can_edit = False
+
+    if plan.user_id == current_user.id:
+        user_can_edit = True
+    else:
+        share_info = PlanShare.query.filter_by(
             travel_plan_id=plan_id,
-            shared_email=current_user.email,
+            shared_user_id=current_user.id,
+            status='accepted',
             can_edit=True
         ).first()
-        
-        if not shared:
-            flash('You do not have permission to edit this travel plan', 'danger')
-            return redirect(url_for('planner.view_plan', plan_id=plan_id))
+        if share_info:
+            user_can_edit = True
+            
+    if not user_can_edit:
+        flash('You do not have permission to edit this travel plan.', 'danger')
+        return redirect(url_for('planner.view_plan', plan_id=plan_id))
     
     if request.method == 'POST':
         # Update plan details
@@ -225,18 +251,23 @@ def edit_plan(plan_id):
 def manage_itinerary(plan_id):
     """Manage itinerary items for a travel plan"""
     plan = TravelPlan.query.get_or_404(plan_id)
-    
-    # Check if user owns this plan or has edit permission
-    if plan.user_id != current_user.id:
-        shared = PlanShare.query.filter_by(
+    user_can_edit = False
+
+    if plan.user_id == current_user.id:
+        user_can_edit = True
+    else:
+        share_info = PlanShare.query.filter_by(
             travel_plan_id=plan_id,
-            shared_email=current_user.email,
+            shared_user_id=current_user.id,
+            status='accepted',
             can_edit=True
         ).first()
-        
-        if not shared:
-            flash('You do not have permission to edit this itinerary', 'danger')
-            return redirect(url_for('planner.view_plan', plan_id=plan_id))
+        if share_info:
+            user_can_edit = True
+
+    if not user_can_edit:
+        flash('You do not have permission to edit this itinerary.', 'danger')
+        return redirect(url_for('planner.view_plan', plan_id=plan_id))
     
     if request.method == 'POST':
         # send JSON data for AJAX requests
@@ -345,43 +376,108 @@ def manage_itinerary(plan_id):
 @planner_bp.route('/<int:plan_id>/share', methods=['GET', 'POST'])
 @login_required
 def share_plan(plan_id):
-    """Share a travel plan with others"""
+    """Share a travel plan with another user by email."""
     plan = TravelPlan.query.get_or_404(plan_id)
-    
-    # Only the owner can share the plan
+
+    # Ensure only the plan owner can share
     if plan.user_id != current_user.id:
-        flash('You do not have permission to share this plan', 'danger')
+        flash('You do not have permission to share this plan.', 'danger')
         return redirect(url_for('planner.view_plan', plan_id=plan_id))
-        
+
     if request.method == 'POST':
         email = request.form.get('email')
         can_edit = 'can_edit' in request.form
-        
-        # Check if already shared with this email
-        existing = PlanShare.query.filter_by(
-            travel_plan_id=plan_id,
-            shared_email=email
+
+        if not email:
+            flash('Email address is required.', 'warning')
+            return redirect(url_for('planner.share_plan', plan_id=plan_id))
+
+        target_user = User.query.filter_by(email=email).first()
+
+        if not target_user:
+            flash(f'User with email "{email}" not found.', 'danger')
+            return redirect(url_for('planner.share_plan', plan_id=plan_id))
+
+        if target_user.id == current_user.id:
+            flash('You cannot share a plan with yourself.', 'warning')
+            return redirect(url_for('planner.share_plan', plan_id=plan_id))
+
+        existing_share = PlanShare.query.filter_by(
+            travel_plan_id=plan.id,
+            shared_user_id=target_user.id
         ).first()
-        
-        if existing:
-            existing.can_edit = can_edit
-            flash(f'Updated sharing permissions for {email}', 'info')
-        else:
-            # Create new share
-            share = PlanShare(
-                travel_plan_id=plan_id,
-                shared_email=email,
-                can_edit=can_edit
-            )
-            db.session.add(share)
-            flash(f'Plan shared with {email}!', 'success')
-            
+
+        if existing_share:
+            if existing_share.status == 'pending':
+                flash(f'A share invitation is already pending for {email}.', 'info')
+            elif existing_share.status == 'accepted':
+                flash(f'This plan is already shared with {email}.', 'info')
+            else: # e.g. rejected, or other statuses
+                # Optionally, allow re-sharing if previously rejected by deleting old share or updating it
+                # For now, let's prevent re-sharing to keep it simple
+                flash(f'This plan was previously shared with {email} and cannot be shared again at this moment.', 'warning')
+            return redirect(url_for('planner.share_plan', plan_id=plan_id))
+
+        # Create new share
+        new_share = PlanShare(
+            travel_plan_id=plan.id,
+            shared_user_id=target_user.id,
+            can_edit=can_edit,
+            status='pending'  # Explicitly set status
+        )
+        db.session.add(new_share)
         db.session.commit()
-        
-    # Get all current shares
-    shares = PlanShare.query.filter_by(travel_plan_id=plan_id).all()
+
+        flash(f'Travel plan shared with {email}. They will need to accept the invitation.', 'success')
+        return redirect(url_for('planner.share_plan', plan_id=plan_id))
+
+    # For GET request, display shares
+    # Ensure shares are queried using shared_user_id and relationship to User for email/username
+    current_shares = PlanShare.query.filter_by(travel_plan_id=plan.id).all()
     
-    return render_template('planner/share.html', plan=plan, shares=shares)
+    # We need to pass user details (like email or username) to the template
+    # The PlanShare model now has 'shared_user' relationship
+    
+    return render_template('planner/share.html', plan=plan, shares=current_shares)
+
+@planner_bp.route('/share_response/<int:share_id>', methods=['POST'])
+@login_required
+def respond_to_share(share_id):
+    share_invitation = PlanShare.query.get_or_404(share_id)
+
+    # Security check: Ensure the current user is the one invited
+    if share_invitation.shared_user_id != current_user.id:
+        flash('You do not have permission to respond to this invitation.', 'danger')
+        return redirect(url_for('planner.index'))
+
+    # Ensure the invitation is still pending
+    if share_invitation.status != 'pending':
+        flash('This invitation is no longer active or has already been responded to.', 'info')
+        # Redirect to plan view if accepted, otherwise to index
+        if share_invitation.status == 'accepted':
+            return redirect(url_for('planner.view_plan', plan_id=share_invitation.travel_plan_id))
+        return redirect(url_for('planner.index'))
+
+    action = request.form.get('action')
+
+    if action == 'accept':
+        share_invitation.status = 'accepted'
+        db.session.commit()
+        flash('Sharing invitation accepted!', 'success')
+        # Redirect to the plan they just accepted
+        return redirect(url_for('planner.view_plan', plan_id=share_invitation.travel_plan_id))
+    elif action == 'reject':
+        share_invitation.status = 'rejected'
+        # Optionally, you might delete the PlanShare record upon rejection 
+        # or keep it as 'rejected' for auditing/history.
+        # For now, let's mark as rejected.
+        # db.session.delete(share_invitation) # Alternative: delete it
+        db.session.commit()
+        flash('Sharing invitation rejected.', 'info')
+    else:
+        flash('Invalid action.', 'danger')
+
+    return redirect(url_for('planner.index'))
 
 @planner_bp.route('/<int:plan_id>/delete', methods=['POST'])
 @login_required

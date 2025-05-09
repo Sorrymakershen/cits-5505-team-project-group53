@@ -17,6 +17,42 @@
             </div>
         </div>
         
+        {# Section for Pending Invitations #}
+        {% if pending_invitations %}
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="h4">Pending Invitations</h2>
+                <div class="list-group">
+                    {% for invitation in pending_invitations %}
+                        <div class="list-group-item list-group-item-action flex-column align-items-start animate fade-in" data-index="inv-{{ loop.index0 }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">Invitation to: {{ invitation.travel_plan.title }}</h5>
+                                <small>from {{ invitation.travel_plan.user.username }}</small>
+                            </div>
+                            <p class="mb-1">
+                                You have been invited to collaborate on the travel plan "{{ invitation.travel_plan.title }}".
+                                {% if invitation.can_edit %}You will have editing rights.{% else %}You will have view-only rights.{% endif %}
+                            </p>
+                            <div class="mt-2">
+                                <form method="POST" action="{{ url_for('planner.respond_to_share', share_id=invitation.id) }}" style="display: inline-block; margin-right: 5px;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="action" value="accept"/>
+                                    <button type="submit" class="btn btn-success btn-sm">Accept</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('planner.respond_to_share', share_id=invitation.id) }}" style="display: inline-block;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="action" value="reject"/>
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {# End of Pending Invitations Section #}
+
         <div class="row g-4">
             {% if plans %}
                 {% for plan in plans %}

@@ -40,9 +40,12 @@ class ItineraryItem(db.Model):
 class PlanShare(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     travel_plan_id = db.Column(db.Integer, db.ForeignKey('travel_plan.id'), nullable=False)
-    shared_email = db.Column(db.String(120), nullable=False)
+    shared_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
     can_edit = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    shared_user = db.relationship('User')
+
     def __repr__(self):
-        return f'<PlanShare {self.shared_email}>'
+        return f'<PlanShare plan_id={self.travel_plan_id} user_id={self.shared_user_id} status={self.status}>'

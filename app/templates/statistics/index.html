@@ -132,9 +132,8 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">                <p class="text-muted mb-4">Your home address is used to calculate travel distances and visualize routes. It is stored securely and only used within the app.</p>
-                  <form id="homeLocationForm" method="post" action="{{ url_for('statistics.set_home_location') }}">
-                    <!-- 不需要 CSRF token -->
+            <div class="modal-body">                <p class="text-muted mb-4">Your home address is used to calculate travel distances and visualize routes. It is stored securely and only used within the app.</p>                  <form id="homeLocationForm" method="post" action="{{ url_for('statistics.set_home_location') }}">
+                    <!-- No CSRF token needed as it's exempt -->
                     <div class="mb-3 address-input-container">
                         <label for="address" class="form-label">Your Home Address</label>
                         <div class="input-group">
@@ -171,8 +170,7 @@
                         </div>
                     </div>
                 </form>
-            </div>
-            <div class="modal-footer">
+            </div>            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="saveLocationBtn" disabled>
                     <i class="fas fa-check me-1"></i> Save Location

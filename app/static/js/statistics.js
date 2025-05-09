@@ -12,18 +12,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isInitialized) return;
     isInitialized = true;
     
+    console.log('Initializing statistics page...');
+    
+    // Initialize location setting functionality first
+    initLocationSetting();
+    
     // Initialize map if home address is set
     const homeAddress = homeAddressData; // This will be defined in the HTML template
     
     if (homeAddress) {
+        console.log('Home address found, initializing map');
         initializeStatisticsMap();
+    } else {
+        console.log('No home address set');
     }
     
     // Load recommendations
     fetchRecommendations();
-    
-    // Initialize location setting functionality
-    initLocationSetting();
     
     // Initialize enhanced data visualizations
     initDataVisualizations();
@@ -267,8 +272,13 @@ function showRecommendationError() {
     `;
 }
 
-// Home location setting functionality
+/**
+ * Home location setting functionality
+ * Handles the setup and interaction for the home location modal
+ */
 function initLocationSetting() {
+    console.log('Initializing location setting...');
+    
     const addressInput = document.getElementById('address');
     const validateBtn = document.getElementById('validateAddressBtn');
     const suggestionsContainer = document.getElementById('suggestions-container');
@@ -279,8 +289,14 @@ function initLocationSetting() {
     let previewMarker = null;
     let debounceTimer;
     
+    if (!homeLocationModal) {
+        console.error('Home location modal not found in DOM');
+        return;
+    }
+    
     // Initialize map when modal is shown using Bootstrap 5 event listener
     homeLocationModal.addEventListener('shown.bs.modal', function() {
+        console.log('Home location modal shown');
         if (!previewMap) {
             previewMap = L.map('previewMap').setView([0, 0], 2);
             
@@ -294,6 +310,7 @@ function initLocationSetting() {
             const lng = document.getElementById('lng').value;
             
             if (lat && lng) {
+                console.log('Displaying existing location on map:', lat, lng);
                 showLocationOnMap(parseFloat(lat), parseFloat(lng), addressInput.value);
             }
         }
@@ -309,7 +326,10 @@ function initLocationSetting() {
         const query = addressInput.value.trim();
         
         if (query.length > 0) {
+            console.log('Validating address:', query);
             fetchAddressSuggestions(query);
+        } else {
+            console.warn('Empty address query');
         }
     });
     
@@ -333,34 +353,110 @@ function initLocationSetting() {
     
     // Handle save button click
     saveLocationBtn.addEventListener('click', function() {
-        homeLocationForm.submit();
+        if (!saveLocationBtn.disabled && homeLocationForm) {
+            console.log('Save button clicked, submitting form');
+            homeLocationForm.submit();
+        } else {
+            console.warn('Save button clicked but it was disabled or form not found');
+        }
     });
     
-    // Fetch address suggestions
+    // Add form submit validation
+    if (homeLocationForm) {
+        homeLocationForm.addEventListener('submit', function(e) {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            
+            if (lat && lng) {
+                console.log('Form submitted with valid location data:', {
+                    address: addressInput.value,
+                    lat: lat,
+                    lng: lng
+                });
+                return true;
+            } else {
+                e.preventDefault();
+                console.error('Missing coordinates. Please validate your address first.');
+                alert('Please validate your address first by searching and selecting a result.');
+                return false;
+            }
+        });
+    } else {
+        console.error('Home location form not found in DOM');
+    }    // Fetch address suggestions
     function fetchAddressSuggestions(query) {
         // Show loading state
         suggestionsContainer.innerHTML = '<div class="address-suggestion text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Searching...</div>';
         suggestionsContainer.classList.remove('d-none');
         
-        // Call Nominatim API
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+        console.log('Fetching address suggestions for:', query);
+
+        // First try direct Nominatim API (simpler, usually works)
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
+            headers: {
+                'User-Agent': 'TravelPlannerApp/1.0'
+            }
+        })
+        .then(response => {
+            console.log('Nominatim API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Nominatim API response data:', data);
+            if (data && data.length > 0) {
+                renderSuggestions(data);
+            } else {
+                // If Nominatim doesn't return results, try our backend
+                console.log('No results from Nominatim, trying backend API');
+                return tryBackendAPI(query);
+            }
+        })
+        .catch(error => {
+            console.error('Error with Nominatim API:', error);
+            // Try our backend as fallback
+            tryBackendAPI(query);
+        });
+
+        // Helper function for backend API call
+        function tryBackendAPI(query) {
+            console.log('Trying backend API for:', query);
+            return fetch('/statistics/validate-address', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ address: query })
+            })
             .then(response => response.json())
             .then(data => {
-                if (data && data.length > 0) {
-                    renderSuggestions(data);
+                if (data.success && data.location) {
+                    // Format the data to match what renderSuggestions expects
+                    const suggestion = [{
+                        display_name: data.location.display_name,
+                        lat: data.location.lat,
+                        lon: data.location.lng
+                    }];
+                    renderSuggestions(suggestion);
                 } else {
                     suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found</div>';
                 }
             })
             .catch(error => {
-                console.error('Error fetching address suggestions:', error);
+                console.error('Error with backend API:', error);
                 suggestionsContainer.innerHTML = '<div class="address-suggestion text-center text-danger">Error searching for address</div>';
             });
+        }
     }
-    
-    // Render suggestions
+      // Render suggestions
     function renderSuggestions(suggestions) {
         suggestionsContainer.innerHTML = '';
+        
+        if (!suggestions || suggestions.length === 0) {
+            suggestionsContainer.innerHTML = '<div class="address-suggestion text-center">No results found</div>';
+            return;
+        }
+        
+        console.log('Rendering suggestions:', suggestions);
         
         suggestions.forEach(suggestion => {
             const div = document.createElement('div');
@@ -369,10 +465,12 @@ function initLocationSetting() {
             
             // Store the coordinates as data attributes
             div.dataset.lat = suggestion.lat;
-            div.dataset.lng = suggestion.lon;
+            div.dataset.lng = suggestion.lon || suggestion.lng; // Handle different property names
             div.dataset.name = suggestion.display_name;
             
             div.addEventListener('click', function() {
+                console.log('Suggestion selected:', this.dataset);
+                
                 // Set the input value
                 addressInput.value = this.dataset.name;
                 
@@ -392,19 +490,50 @@ function initLocationSetting() {
                 
                 // Enable save button
                 saveLocationBtn.disabled = false;
+                console.log('Save button enabled');
             });
             
             suggestionsContainer.appendChild(div);
         });
     }
-    
-    // Show selected location on the map
+      /**
+     * Show selected location on the preview map
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {string} address - Display name of the location
+     */
     function showLocationOnMap(lat, lng, address) {
-        // Show the map container
-        document.getElementById('locationPreview').classList.remove('d-none');
+        console.log('Showing location on map:', lat, lng, address);
         
-        // Update the map
-        previewMap.setView([lat, lng], 13);
+        // Safety checks
+        if (!lat || !lng) {
+            console.error('Invalid coordinates:', lat, lng);
+            return;
+        }
+        
+        // Get the preview element
+        const locationPreview = document.getElementById('locationPreview');
+        if (!locationPreview) {
+            console.error('Location preview element not found');
+            return;
+        }
+        
+        // Show the map container
+        locationPreview.classList.remove('d-none');
+        
+        // Make sure map is initialized
+        if (!previewMap) {
+            console.warn('Preview map not initialized yet, creating it now');
+            previewMap = L.map('previewMap').setView([lat, lng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(previewMap);
+        } else {
+            // Update the map view
+            previewMap.setView([lat, lng], 13);
+        }
         
         // Remove existing marker if any
         if (previewMarker) {
@@ -416,7 +545,17 @@ function initLocationSetting() {
         previewMarker.bindPopup(`<strong>Selected Location</strong><br>${address}`).openPopup();
         
         // Update the coordinates display
-        document.getElementById('selectedLat').textContent = lat.toFixed(6);
-        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+        const selectedLat = document.getElementById('selectedLat');
+        const selectedLng = document.getElementById('selectedLng');
+        
+        if (selectedLat && selectedLng) {
+            selectedLat.textContent = lat.toFixed(6);
+            selectedLng.textContent = lng.toFixed(6);
+        }
+        
+        // Force map to recalculate size
+        setTimeout(function() {
+            previewMap.invalidateSize();
+        }, 100);
     }
 }

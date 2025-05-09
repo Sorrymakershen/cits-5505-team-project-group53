@@ -33,22 +33,34 @@ def index():
 @csrf.exempt  # 禁用此路由的 CSRF 保护
 def set_home_location():
     """Set user's home location"""
-    if request.method == 'POST':
-        address = request.form.get('address')
-        lat = request.form.get('lat')
-        lng = request.form.get('lng')
-        
-        if not address or not lat or not lng:
-            flash('Please enter a valid city', 'danger')
+    try:
+        if request.method == 'POST':
+            # Log the form data for debugging
+            current_app.logger.info(f"Form data received: {request.form}")
+            
+            address = request.form.get('address')
+            lat = request.form.get('lat')
+            lng = request.form.get('lng')
+            
+            if not address:
+                flash('Please enter an address', 'danger')
+                return redirect(url_for('statistics.index'))
+                
+            if not lat or not lng:
+                flash('Please validate your address to get coordinates', 'danger')
+                return redirect(url_for('statistics.index'))
+            
+            # Update user's home location
+            current_user.home_address = address
+            current_user.home_lat = float(lat)
+            current_user.home_lng = float(lng)
+            db.session.commit()
+            
+            flash('Home location set successfully!', 'success')
             return redirect(url_for('statistics.index'))
-        
-        # Update user's home location
-        current_user.home_address = address
-        current_user.home_lat = float(lat)
-        current_user.home_lng = float(lng)
-        db.session.commit()
-        
-        flash('Home setting successfully!', 'success')
+    except Exception as e:
+        current_app.logger.error(f"Error setting home location: {str(e)}")
+        flash(f'Error saving home location: {str(e)}', 'danger')
         return redirect(url_for('statistics.index'))
 
 @statistics_bp.route('/validate-address', methods=['POST'])

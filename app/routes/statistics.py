@@ -30,7 +30,7 @@ def index():
 
 @statistics_bp.route('/set-home-location', methods=['POST'])
 @login_required
-@csrf.exempt  # 禁用此路由的 CSRF 保护
+@csrf.exempt  # Disable CSRF protection for this route
 def set_home_location():
     """Set user's home location"""
     try:
@@ -65,7 +65,7 @@ def set_home_location():
 
 @statistics_bp.route('/validate-address', methods=['POST'])
 @login_required
-@csrf.exempt  # 禁用此路由的 CSRF 保护
+@csrf.exempt  # Disable CSRF protection for this route
 def validate_address():
     """API endpoint to validate an address using Nominatim"""
     data = request.json
@@ -585,9 +585,9 @@ def get_nearby_countries(visited_countries):
 @statistics_bp.route('/api/statistics/monthly-expenses')
 @login_required
 def monthly_expenses_data():
-    """API endpoint返回用户月度旅行支出数据"""
+    """API endpoint that returns user's monthly travel expenses data"""
     try:
-        # 获取用户的旅行计划，按月份分组
+        # Get the user's travel plans grouped by month
         current_year = datetime.now().year
         monthly_data = TravelPlan.query.filter(
             TravelPlan.user_id == current_user.id,
@@ -597,12 +597,12 @@ def monthly_expenses_data():
             func.sum(TravelPlan.budget).label('total_budget')
         ).group_by('month').order_by('month').all()
         
-        # 生成所有月份数据（包括没有旅行的月份）
+        # Generate all months data (including months without travel)
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         expenses_data = [0] * 12
         
         for item in monthly_data:
-            month_idx = int(item.month) - 1  # 月份从1开始，索引从0开始
+            month_idx = int(item.month) - 1  # Months start at 1, index starts at 0
             expenses_data[month_idx] = float(item.total_budget or 0)
         
         return jsonify({
@@ -612,7 +612,7 @@ def monthly_expenses_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取月度支出数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching monthly expenses data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching monthly expenses data'
@@ -621,12 +621,12 @@ def monthly_expenses_data():
 @statistics_bp.route('/api/statistics/duration-distribution')
 @login_required
 def duration_distribution_data():
-    """API endpoint返回用户旅行时长分布数据"""
+    """API endpoint that returns user's travel duration distribution data"""
     try:
-        # 获取用户的所有旅行计划
+        # Get all user's travel plans
         travel_plans = TravelPlan.query.filter_by(user_id=current_user.id).all()
         
-        # 定义时长类别
+        # Define duration categories
         duration_categories = {
             'Short (1-3 days)': 0,
             'Medium (4-7 days)': 0,
@@ -635,7 +635,7 @@ def duration_distribution_data():
             'Long-term (30+ days)': 0
         }
         
-        # 计算每个旅行的持续时间并归类
+        # Calculate duration for each trip and categorize
         for plan in travel_plans:
             if plan.start_date and plan.end_date:
                 duration = (plan.end_date - plan.start_date).days + 1
@@ -651,10 +651,9 @@ def duration_distribution_data():
                 else:
                     duration_categories['Long-term (30+ days)'] += 1
         
-        # 过滤掉计数为0的类别
+        # Filter out categories with zero counts
         filtered_categories = {k: v for k, v in duration_categories.items() if v > 0}
         
-        # 如果没有数据，返回默认类别
         if not filtered_categories:
             return jsonify({
                 'success': True,
@@ -669,7 +668,7 @@ def duration_distribution_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取旅行时长分布数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching duration distribution data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching duration distribution data'
@@ -678,9 +677,9 @@ def duration_distribution_data():
 @statistics_bp.route('/api/statistics/destination-frequency')
 @login_required
 def destination_frequency_data():
-    """API endpoint返回用户目的地频率数据"""
+    """API endpoint that returns destination visit frequency data"""
     try:
-        # 获取用户旅行的目的地频率
+        # Get destination visit frequency for the user
         destinations = TravelPlan.query.filter_by(user_id=current_user.id).with_entities(
             TravelPlan.destination,
             func.count(TravelPlan.id).label('count')
@@ -694,11 +693,11 @@ def destination_frequency_data():
                 'colors': []
             })
         
-        # 准备数据
+        # Prepare data
         labels = [d.destination for d in destinations]
         data = [d.count for d in destinations]
         
-        # 生成随机颜色
+        # Generate random colors
         colors = []
         for _ in range(len(destinations)):
             r = random.randint(50, 200)
@@ -714,7 +713,7 @@ def destination_frequency_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取目的地频率数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching destination frequency data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching destination frequency data'
@@ -723,19 +722,19 @@ def destination_frequency_data():
 @statistics_bp.route('/api/statistics/expense-chart')
 @login_required
 def expense_chart_data():
-    """API endpoint返回用户旅行支出对比数据"""
+    """API endpoint that returns user's travel expense comparison data"""
     try:
-        # 获取用户的所有旅行计划，按年份分组
+        # Get all user travel plans, grouped by year
         yearly_data = TravelPlan.query.filter_by(user_id=current_user.id).with_entities(
             extract('year', TravelPlan.start_date).label('year'),
             func.sum(TravelPlan.budget).label('total_budget')
         ).group_by('year').order_by('year').all()
         
-        # 准备数据
+        # Prepare data
         years = [int(item.year) for item in yearly_data]
         expenses = [float(item.total_budget) for item in yearly_data]
         
-        # 计算每次旅行的平均支出
+        # Compute average expense per trip
         avg_expenses = []
         for year in years:
             trips_count = TravelPlan.query.filter(
@@ -757,7 +756,7 @@ def expense_chart_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取支出图表数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching expense chart data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching expense chart data'
@@ -766,9 +765,9 @@ def expense_chart_data():
 @statistics_bp.route('/api/statistics/destination-comparison')
 @login_required
 def destination_comparison_data():
-    """API endpoint返回用户目的地对比数据"""
+    """API endpoint that returns destination comparison data for the user"""
     try:
-        # 获取用户去过的所有目的地
+        # Get all destinations the user has been to
         destinations_data = TravelPlan.query.filter_by(user_id=current_user.id).with_entities(
             TravelPlan.destination,
             func.count(TravelPlan.id).label('visits'),
@@ -781,10 +780,10 @@ def destination_comparison_data():
                 'destinations': []
             })
         
-        # 计算每个目的地的数据
+        # Compute data for each destination
         destination_stats = []
         for dest in destinations_data:
-            # 计算该目的地的平均停留天数
+            # Calculate average duration of stay at this destination
             trips = TravelPlan.query.filter_by(
                 user_id=current_user.id,
                 destination=dest.destination
@@ -800,11 +799,11 @@ def destination_comparison_data():
             
             avg_duration = total_days / valid_trips if valid_trips > 0 else 0
             
-            # 计算每日平均花费
+            # Calculate daily average cost
             daily_cost = dest.avg_budget / avg_duration if avg_duration > 0 else 0
             
-            # 模拟距离数据（实际应用中可以使用地理编码API获取真实距离）
-            distance = random.uniform(500, 10000)  # 假设距离为500-10000公里
+            # Simulate distance data (use real geocoding API in production)
+            distance = random.uniform(500, 10000)  # Assume distance is between 500–10000 km
             
             destination_stats.append({
                 'name': dest.destination,
@@ -820,7 +819,7 @@ def destination_comparison_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取目的地对比数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching destination comparison data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching destination comparison data'
@@ -829,9 +828,9 @@ def destination_comparison_data():
 @statistics_bp.route('/api/statistics/travel-timeline')
 @login_required
 def travel_timeline_data():
-    """API endpoint返回用户旅行时间轴数据"""
+    """API endpoint that returns user's travel timeline data"""
     try:
-        # 获取用户的旅行计划，按开始日期排序
+        # Get user's travel plans ordered by start date
         travel_plans = TravelPlan.query.filter_by(
             user_id=current_user.id
         ).order_by(TravelPlan.start_date.desc()).all()
@@ -842,14 +841,14 @@ def travel_timeline_data():
                 'trips': []
             })
         
-        # 准备时间轴数据
+        # Prepare timeline data
         timeline_data = []
         for plan in travel_plans:
-            # 检查日期是否有效
+            # Check if dates are valid
             if not plan.start_date or not plan.end_date:
                 continue
                 
-            # 格式化日期为ISO格式，以便前端解析
+            # Format date as ISO for frontend parsing
             timeline_data.append({
                 'id': plan.id,
                 'title': plan.title,
@@ -866,7 +865,7 @@ def travel_timeline_data():
         })
     
     except Exception as e:
-        current_app.logger.error(f'获取旅行时间轴数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching travel timeline data: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching travel timeline data'
@@ -875,23 +874,23 @@ def travel_timeline_data():
 @statistics_bp.route('/api/expenses/by-trip')
 @login_required
 def expenses_by_trip():
-    """API endpoint返回按旅行行程分类的费用数据"""
+    """API endpoint that returns expense data categorized by trip"""
     try:
-        # 获取用户的所有旅行计划
+        # Get all user's travel plans
         travel_plans = TravelPlan.query.filter_by(user_id=current_user.id).all()
         
-        # 准备数据结构
+        # Prepare data structure
         trips_data = []
         aggregated_data = {
             'categories': [],
             'values': []
         }
         
-        # 分类总计
+        # Aggregate categories
         all_categories = {}
         
         for plan in travel_plans:
-            # 每个行程的数据
+            # Data for each trip
             trip_data = {
                 'id': plan.id,
                 'title': plan.title,
@@ -901,39 +900,39 @@ def expenses_by_trip():
                 }
             }
             
-            # 处理该行程的所有支出项目
+            # Process all expense items in the trip
             categories_dict = {}
             
             for item in plan.itinerary_items:
                 if item.cost and item.cost > 0:
-                    # 使用活动类型作为分类
+                    # Use the first word of activity as category
                     category = item.activity.split(' ')[0] if item.activity else 'Other'
                     
-                    # 累加到该行程的分类中
+                    # Add to this trip's category
                     if category not in categories_dict:
                         categories_dict[category] = item.cost
                     else:
                         categories_dict[category] += item.cost
                     
-                    # 同时累加到总体分类中
+                    # Also add to overall categories
                     if category not in all_categories:
                         all_categories[category] = item.cost
                     else:
                         all_categories[category] += item.cost
             
-            # 将字典转换为两个列表
+            # Convert dict to lists
             for category, value in categories_dict.items():
                 trip_data['expenses']['categories'].append(category)
                 trip_data['expenses']['values'].append(value)
             
             trips_data.append(trip_data)
         
-        # 将总体分类数据转换为两个列表
+        # Convert overall category data to lists
         for category, value in all_categories.items():
             aggregated_data['categories'].append(category)
             aggregated_data['values'].append(value)
         
-        # 返回每个行程的数据和汇总数据
+        # Return both trip-specific and overall data
         return jsonify({
             'success': True,
             'trips': trips_data,
@@ -941,7 +940,7 @@ def expenses_by_trip():
         })
         
     except Exception as e:
-        current_app.logger.error(f'获取按旅行分类的费用数据时出错: {str(e)}')
+        current_app.logger.error(f'Error fetching expense data by trip: {str(e)}')
         return jsonify({
             'success': False,
             'message': 'Error fetching expense data by trip'

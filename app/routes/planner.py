@@ -271,7 +271,7 @@ def manage_itinerary(plan_id):
     
     if request.method == 'POST':
         # send JSON data for AJAX requests
-        if request.is_xhr or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 # get data from request
                 data = request.json
@@ -284,13 +284,28 @@ def manage_itinerary(plan_id):
                 
                 # handle empty strings for lat/lng/cost
                 lat_str = data.get('lat')
-                lat = float(lat_str) if lat_str and lat_str.strip() else None
+                if lat_str and isinstance(lat_str, str) and lat_str.strip():
+                    lat = float(lat_str)
+                elif lat_str and isinstance(lat_str, (int, float)):
+                    lat = float(lat_str)
+                else:
+                    lat = None
                 
                 lng_str = data.get('lng')
-                lng = float(lng_str) if lng_str and lng_str.strip() else None
+                if lng_str and isinstance(lng_str, str) and lng_str.strip():
+                    lng = float(lng_str)
+                elif lng_str and isinstance(lng_str, (int, float)):
+                    lng = float(lng_str)
+                else:
+                    lng = None
                 
                 cost_str = data.get('cost')
-                cost = float(cost_str) if cost_str and cost_str.strip() else 0
+                if cost_str and isinstance(cost_str, str) and cost_str.strip():
+                    cost = float(cost_str)
+                elif cost_str and isinstance(cost_str, (int, float)):
+                    cost = float(cost_str)
+                else:
+                    cost = 0
                 
                 notes = data.get('notes')
                 
@@ -343,10 +358,10 @@ def manage_itinerary(plan_id):
             
             # Convert empty strings to None for float fields
             lat = request.form.get('lat')
-            lat = float(lat) if lat.strip() else None
+            lat = float(lat) if lat and lat.strip() else None
             
             lng = request.form.get('lng') 
-            lng = float(lng) if lng.strip() else None
+            lng = float(lng) if lng and lng.strip() else None
             
             cost = float(request.form.get('cost') or 0)
             notes = request.form.get('notes')

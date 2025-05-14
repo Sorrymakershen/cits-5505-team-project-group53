@@ -13,7 +13,7 @@ from tests.test_security import TestSecurityFeatures
 
 # Skip Selenium tests unless specifically requested
 if '--with-selenium' in sys.argv:
-    from tests.test_selenium import TestAuthSelenium, TestPlannerSelenium
+    from tests.test_selenium import TestAuthSelenium, TestPlannerSelenium, TestSecuritySelenium
 
 def create_test_suite():
     """Create a test suite with all the test cases"""
@@ -38,7 +38,7 @@ def create_test_suite():
     if '--with-selenium' in sys.argv:
         test_suite.addTest(unittest.makeSuite(TestAuthSelenium))
         test_suite.addTest(unittest.makeSuite(TestPlannerSelenium))
-    
+        test_suite.addTest(unittest.makeSuite(TestSecuritySelenium))
     return test_suite
 
 if __name__ == '__main__':

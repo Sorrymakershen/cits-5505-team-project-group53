@@ -210,7 +210,7 @@
         let itemsJson;
         try {
             const itemsData = mapElement.dataset.items;
-            console.log('Raw map items data:', itemsData);
+            // Removed sensitive data logging
             itemsJson = JSON.parse(itemsData);
         } catch (e) {
             console.error('Error parsing map items data:', e);
@@ -251,7 +251,7 @@
                    !isNaN(parseFloat(item.lng));
         });
         
-        console.log('Valid items for map markers:', validItems);
+        // Removed logging of location data
         
         // If no valid items, center map on default location
         if (validItems.length === 0) {
@@ -437,8 +437,7 @@
             });
         }
         
-        // Log the processed items for debugging
-        console.log("Processed items for table update:", allItems);
+        // Removed logging of sensitive itinerary data
         
         // order items by day and time
         allItems.sort((a, b) => {

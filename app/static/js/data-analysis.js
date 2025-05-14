@@ -658,7 +658,7 @@ function initTravelTimeline() {
  * @param {Object} data - The timeline data
  */
 function renderTravelTimeline(container, data) {
-    console.log("Rendering travel timeline", data);
+    // Removed logging of sensitive travel timeline data
     
     if (!data.trips || !Array.isArray(data.trips) || data.trips.length === 0) {
         container.innerHTML = `
@@ -769,7 +769,7 @@ function initDestinationComparison() {
  * @param {Object} data - The comparison data
  */
 function renderDestinationComparison(container, data) {
-    console.log("Rendering destination comparison");
+    // Removed console logging
     
     // Ensure data structure is correct with enough destinations to compare
     if (!data.destinations || !Array.isArray(data.destinations) || data.destinations.length < 2) {
@@ -951,7 +951,7 @@ function formatDate(date) {
  * @returns {Promise} - Promise resolving to the fetched data
  */
 function fetchDataForVisualization(url) {
-    console.log(`Fetching data from: ${url}`);
+    // Removed logging of API endpoint URL
     return fetch(url, {
         headers: {
             'Cache-Control': 'no-store',
@@ -966,7 +966,7 @@ function fetchDataForVisualization(url) {
         return response.json();
     })
     .then(data => {
-        console.log(`Data received from ${url}:`, data);
+        // Removed logging of sensitive travel data
         // Check if the API returned success:false
         if (data && data.success === false) {
             throw new Error(data.message || 'API returned success:false');

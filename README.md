@@ -102,7 +102,7 @@ travel-planning-platform/
 │   │   │    ├── create.html    # Create new memory
 │   │   │    ├── edit.html      # Edit existing memory
 │   │   │    ├── view.html      # View memory details
-│   │   │   └── list.html      # List all memories
+│   │   │    └── list.html      # List all memories
 │   │   ├── statistics/        # Statistics templates
 │   │   │    └──index.html      # view all statistics
 │   └── utils/                 # Utility functions

@@ -310,7 +310,7 @@ function initLocationSetting() {
             const lng = document.getElementById('lng').value;
             
             if (lat && lng) {
-                console.log('Displaying existing location on map:', lat, lng);
+                // Removed logging of sensitive location data
                 showLocationOnMap(parseFloat(lat), parseFloat(lng), addressInput.value);
             }
         }
@@ -326,7 +326,7 @@ function initLocationSetting() {
         const query = addressInput.value.trim();
         
         if (query.length > 0) {
-            console.log('Validating address:', query);
+            // Removed logging of user's address input
             fetchAddressSuggestions(query);
         } else {
             console.warn('Empty address query');
@@ -398,16 +398,16 @@ function initLocationSetting() {
             }
         })
         .then(response => {
-            console.log('Nominatim API response status:', response.status);
+            // Removed logging of API response status
             return response.json();
         })
         .then(data => {
-            console.log('Nominatim API response data:', data);
+            // Removed logging of sensitive location data from API
             if (data && data.length > 0) {
                 renderSuggestions(data);
             } else {
                 // If Nominatim doesn't return results, try our backend
-                console.log('No results from Nominatim, trying backend API');
+                // Removed logging of API fallback
                 return tryBackendAPI(query);
             }
         })
@@ -456,7 +456,7 @@ function initLocationSetting() {
             return;
         }
         
-        console.log('Rendering suggestions:', suggestions);
+        // Removed logging of sensitive location data
         
         suggestions.forEach(suggestion => {
             const div = document.createElement('div');
@@ -469,7 +469,7 @@ function initLocationSetting() {
             div.dataset.name = suggestion.display_name;
             
             div.addEventListener('click', function() {
-                console.log('Suggestion selected:', this.dataset);
+                // Removed logging of sensitive location data
                 
                 // Set the input value
                 addressInput.value = this.dataset.name;
@@ -503,11 +503,11 @@ function initLocationSetting() {
      * @param {string} address - Display name of the location
      */
     function showLocationOnMap(lat, lng, address) {
-        console.log('Showing location on map:', lat, lng, address);
+        // Removed logging of sensitive location data
         
         // Safety checks
         if (!lat || !lng) {
-            console.error('Invalid coordinates:', lat, lng);
+            console.error('Invalid coordinates provided');
             return;
         }
         

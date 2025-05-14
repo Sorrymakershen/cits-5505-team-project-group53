@@ -98,11 +98,13 @@ travel-planning-platform/
 │   │   │   ├── edit.html      # Edit existing plan
 │   │   │   ├── view.html      # View plan details
 │   │   │   └── list.html      # List all plans
-│   │   └── memories/          # Memory templates
-│   │       ├── create.html    # Create new memory
-│   │       ├── edit.html      # Edit existing memory
-│   │       ├── view.html      # View memory details
-│   │       └── list.html      # List all memories
+│   │   ├── memories/          # Memory templates
+│   │   │    ├── create.html    # Create new memory
+│   │   │    ├── edit.html      # Edit existing memory
+│   │   │    ├── view.html      # View memory details
+│   │   │    └── list.html      # List all memories
+│   │   ├── statistics/        # Statistics templates
+│   │   │    └──index.html      # view all statistics
 │   └── utils/                 # Utility functions
 │       ├── __init__.py
 │       ├── email.py           # Email sending functionality
@@ -164,7 +166,8 @@ The application allows users to create detailed travel plans with destinations, 
 Visit the About, Privacy Policy, and Terms of Service pages for more information about the platform.
 #### Developers
 23935599 XINYU SHEN Sorrymakershen
-
+24181422 Jianyun Yang Mattyang808 
+24478162 Guan Wang guan629257
 
 © 2025
 

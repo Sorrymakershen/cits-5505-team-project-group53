@@ -14,7 +14,7 @@ from tests.test_statistics import TestStatisticsRoutes, TestStatisticsCalculatio
 
 # Skip Selenium tests unless specifically requested
 if '--with-selenium' in sys.argv:
-    from tests.test_selenium import TestAuthSelenium, TestPlannerSelenium
+    from tests.test_selenium import TestAuthSelenium, TestPlannerSelenium, TestSecuritySelenium
     from tests.test_statistics_js import TestStatisticsJS
 
 # Skip performance tests unless specifically requested
@@ -48,6 +48,7 @@ def create_test_suite():
         test_suite.addTest(unittest.makeSuite(TestAuthSelenium))
         test_suite.addTest(unittest.makeSuite(TestPlannerSelenium))
         test_suite.addTest(unittest.makeSuite(TestStatisticsJS))
+        test_suite.addTest(unittest.makeSuite(TestSecuritySelenium))
     
     # Add performance tests if requested
     if '--with-performance' in sys.argv:

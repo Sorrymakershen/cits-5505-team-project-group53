@@ -124,9 +124,7 @@
                                 <input type="number" step="any" class="form-control" id="lng" name="lng">
                             </div>
                             <div class="col-12 mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="get-current-location">
-                                    <i class="fas fa-map-marker-alt me-1"></i> Use Current Location
-                                </button>
+                                
                             </div>
                         </div>
                         
@@ -277,18 +275,82 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
-    // Get current location
+      // Get current location
     document.getElementById('get-current-location').addEventListener('click', function() {
+        const locationBtn = this;
+        const originalBtnText = locationBtn.innerHTML;
+        
+        // Show loading state
+        locationBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div> Getting location...';
+        locationBtn.disabled = true;
+        
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                document.getElementById('lat').value = position.coords.latitude;
-                document.getElementById('lng').value = position.coords.longitude;
-            }, function() {
-                alert('Unable to retrieve your location');
-            });
+            navigator.geolocation.getCurrentPosition(
+                // Success callback
+                function(position) {
+                    document.getElementById('lat').value = position.coords.latitude;
+                    document.getElementById('lng').value = position.coords.longitude;
+                    
+                    // Show success message
+                    const latLngInfo = document.createElement('div');
+                    latLngInfo.className = 'mt-2 text-success small';
+                    latLngInfo.innerHTML = '<i class="fas fa-check-circle"></i> Location acquired successfully!';
+                    locationBtn.parentNode.appendChild(latLngInfo);
+                    
+                    // Reset button
+                    locationBtn.innerHTML = originalBtnText;
+                    locationBtn.disabled = false;
+                    
+                    // Remove success message after a few seconds
+                    setTimeout(() => {
+                        latLngInfo.remove();
+                    }, 3000);
+                },
+                // Error callback
+                function(error) {
+                    let errorMsg;
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Location access was denied. Please check your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'The request to get location timed out.';
+                            break;
+                        default:
+                            errorMsg = 'An unknown error occurred.';
+                    }
+                    
+                    // Show error message
+                    const errorInfo = document.createElement('div');
+                    errorInfo.className = 'mt-2 text-danger small';
+                    errorInfo.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
+                    locationBtn.parentNode.appendChild(errorInfo);
+                    
+                    // Reset button
+                    locationBtn.innerHTML = originalBtnText;
+                    locationBtn.disabled = false;
+                    
+                    // Remove error message after a few seconds
+                    setTimeout(() => {
+                        errorInfo.remove();
+                    }, 5000);
+                },
+                // Options
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
         } else {
             alert('Geolocation is not supported by your browser');
+            
+            // Reset button
+            locationBtn.innerHTML = originalBtnText;
+            locationBtn.disabled = false;
         }
     });
 });

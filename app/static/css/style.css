@@ -153,6 +153,34 @@ footer {
   padding: 2rem 0;
   margin-top: 3rem;
 }
+.social-links a {
+  color: white;
+  font-size: 24px;
+  transition: color 0.3s ease;
+}
+/* Smooth transition (optional but recommended) */
+.social-links a i {
+  transition: color 0.3s ease;
+}
+
+/* Hover brand colors */
+.social-links a.facebook:hover i {
+  color: #1877f2; /* Facebook Blue */
+}
+
+.social-links a.twitter:hover i {
+  color: #1da1f2; /* Twitter Blue */
+}
+
+.social-links a.instagram:hover i {
+  color: #e1306c; /* Instagram Pinkish */
+}
+
+.social-links a.pinterest:hover i {
+  color: #e60023; /* Pinterest Red */
+}
+
+
 
 /* Hero Section */
 .hero {

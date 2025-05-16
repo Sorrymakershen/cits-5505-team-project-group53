@@ -989,3 +989,26 @@ window.travelApp = {
     showToast: showToast,
     openImageModal: openImageModal
 };
+document.addEventListener('DOMContentLoaded', function () {
+    const passwordInput = document.getElementById('password');
+
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function () {
+            const value = passwordInput.value;
+
+            toggleRequirement('length', value.length >= 8);
+            toggleRequirement('uppercase', /[A-Z]/.test(value));
+            toggleRequirement('lowercase', /[a-z]/.test(value));
+            toggleRequirement('number', /[0-9]/.test(value));
+            toggleRequirement('special', /[!@#$%^&*]/.test(value));
+        });
+    }
+
+    function toggleRequirement(id, valid) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.classList.toggle('text-muted', !valid);
+            element.classList.toggle('text-success', valid);
+        }
+    }
+});
